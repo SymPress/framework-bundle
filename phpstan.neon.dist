@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    treatPhpDocTypesAsCertain: false
+    paths:
+        - src
+        - config
+        - inc
+        - dropin
+        - tests
+    bootstrapFiles:
+        - ../../vendor/autoload.php
+        - tests/phpunit/bootstrap.php

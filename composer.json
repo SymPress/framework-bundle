@@ -1,0 +1,124 @@
+{
+    "name": "sympress/framework-bundle",
+    "description": "SymPress FrameworkBundle bridge with Symfony Cache integration and WordPress object-cache support.",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Brian Schaffner",
+            "email": "brian.schaeffner@sympress.de",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.5",
+        "psr/cache": "^3.0",
+        "psr/simple-cache": "^3.0",
+        "symfony/cache": "^8.1",
+        "symfony/cache-contracts": "^3.6",
+        "symfony/config": "^8.1",
+        "symfony/console": "^8.1",
+        "symfony/dependency-injection": "^8.1",
+        "symfony/error-handler": "^8.1",
+        "symfony/expression-language": "^8.0",
+        "symfony/filesystem": "^8.0",
+        "symfony/framework-bundle": "^8.1",
+        "symfony/http-kernel": "^8.1",
+        "symfony/routing": "^8.0",
+        "symfony/service-contracts": "^3.6",
+        "symfony/yaml": "^8.0",
+        "sympress/kernel": "^1.0@dev"
+    },
+    "require-dev": {
+        "brain/monkey": "^2.6",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5",
+        "sympress/coding-standards": "dev-main"
+    },
+    "suggest": {
+        "symfony/asset": "Enables FrameworkBundle asset package integration.",
+        "symfony/asset-mapper": "Enables asset mapper configuration.",
+        "symfony/form": "Enables FrameworkBundle form integration.",
+        "symfony/html-sanitizer": "Enables HTML sanitizer configuration.",
+        "symfony/http-client": "Enables HTTP client configuration.",
+        "symfony/lock": "Enables lock store configuration.",
+        "symfony/mailer": "Enables mailer configuration.",
+        "symfony/messenger": "Enables messenger buses, transports and cache early-expiration dispatch.",
+        "symfony/notifier": "Enables notifier, chatter and texter configuration.",
+        "symfony/process": "Enables process messenger integration.",
+        "symfony/property-access": "Enables property access cache integration.",
+        "symfony/property-info": "Enables property info extractors.",
+        "symfony/rate-limiter": "Enables rate limiter configuration.",
+        "symfony/scheduler": "Enables scheduler configuration.",
+        "symfony/security-csrf": "Enables CSRF token services.",
+        "symfony/semaphore": "Enables semaphore store configuration.",
+        "symfony/serializer": "Enables serializer configuration.",
+        "symfony/translation": "Enables translator configuration.",
+        "symfony/uid": "Enables UID and UUID services.",
+        "symfony/validator": "Enables validator configuration.",
+        "symfony/web-link": "Enables web link support.",
+        "symfony/webhook": "Enables webhook and remote-event configuration.",
+        "symfony/workflow": "Enables workflow configuration."
+    },
+    "autoload": {
+        "psr-4": {
+            "SymPress\\Framework\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SymPress\\Framework\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "kernel": {
+            "bundle": "SymPress\\Framework\\SymPressFrameworkBundle",
+            "entry": "framework-bundle"
+        }
+    },
+    "scripts": {
+        "cs": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpcs --standard=phpcs.xml.dist"
+        ],
+        "cs:fix": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpcbf --standard=phpcs.xml.dist"
+        ],
+        "static-analysis": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpstan analyse --memory-limit=1G --no-progress -c phpstan.neon.dist"
+        ],
+        "test": [
+            "@tests"
+        ],
+        "tests": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpunit --configuration phpunit.xml.dist --no-coverage"
+        ],
+        "qa": [
+            "@cs",
+            "@static-analysis",
+            "@tests"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "./../*",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

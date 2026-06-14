@@ -8,5 +8,9 @@ parameters:
         - dropin
         - tests
     bootstrapFiles:
-        - ../../vendor/autoload.php
+        - vendor/autoload.php
         - tests/phpunit/bootstrap.php
+    scanFiles:
+        - stubs/wp-cli.stub.php
+    stubFiles:
+        - stubs/wp-cli.stub.php

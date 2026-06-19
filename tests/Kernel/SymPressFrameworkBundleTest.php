@@ -42,7 +42,7 @@ final class SymPressFrameworkBundleTest extends TestCase
         $loaded = $kernel->configureContainer($container->builder(), $container, $registry);
         $kernel->createRuntimeContainer($container, $registry, $loaded);
 
-        self::assertContains($projectDir . '/config/packages/framework.php', $loaded);
+        self::assertContains($projectDir . '/Resources/config/packages/framework.php', $loaded);
         self::assertTrue($container->has('request_stack'));
         self::assertTrue($container->has('http_kernel'));
         self::assertTrue($container->has('cache.app'));

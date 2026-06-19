@@ -222,7 +222,7 @@ final class FrameworkCacheConfigurationPassTest extends TestCase
         $container->setParameter('kernel.environment', 'test');
         $container->setParameter('wordpress.content_dir', null);
 
-        $loader = new PhpFileLoader($container, new FileLocator(dirname(__DIR__, 2) . '/config'));
+        $loader = new PhpFileLoader($container, new FileLocator(dirname(__DIR__, 2) . '/Resources/config'));
         $loader->load('services.php');
 
         return $container;

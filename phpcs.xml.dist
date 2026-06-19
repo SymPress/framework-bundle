@@ -12,7 +12,7 @@
     <config name="text_domain" value="sympress-framework"/>
 
     <file>src</file>
-    <file>config</file>
+    <file>Resources</file>
     <file>inc</file>
     <file>dropin</file>
 

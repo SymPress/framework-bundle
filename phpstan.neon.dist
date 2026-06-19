@@ -3,7 +3,7 @@ parameters:
     treatPhpDocTypesAsCertain: false
     paths:
         - src
-        - config
+        - Resources
         - inc
         - dropin
         - tests

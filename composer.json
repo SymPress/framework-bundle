@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "php": ">=8.5",
+        "php": "^8.5",
         "psr/cache": "^3.0",
         "psr/simple-cache": "^3.0",
         "symfony/cache": "^8.1",
@@ -31,10 +31,7 @@
     },
     "require-dev": {
         "brain/monkey": "^2.6",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-        "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^11.5",
-        "sympress/coding-standards": "dev-main"
+        "sympress/qa": "dev-main"
     },
     "suggest": {
         "symfony/asset": "Enables FrameworkBundle asset package integration.",
@@ -80,22 +77,22 @@
     "scripts": {
         "cs": [
             "Composer\\Config::disableProcessTimeout",
-            "phpcs --standard=phpcs.xml.dist"
+            "qa cs"
         ],
         "cs:fix": [
             "Composer\\Config::disableProcessTimeout",
-            "phpcbf --standard=phpcs.xml.dist"
+            "qa cs:fix"
         ],
         "static-analysis": [
             "Composer\\Config::disableProcessTimeout",
-            "phpstan analyse --memory-limit=1G --no-progress -c phpstan.neon.dist"
-        ],
-        "test": [
-            "@tests"
+            "qa static-analysis"
         ],
         "tests": [
             "Composer\\Config::disableProcessTimeout",
-            "phpunit --configuration phpunit.xml.dist --no-coverage"
+            "qa tests"
+        ],
+        "test": [
+            "@tests"
         ],
         "qa": [
             "@cs",
@@ -107,7 +104,8 @@
         "sort-packages": true,
         "optimize-autoloader": true,
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "phpstan/extension-installer": true
         }
     },
     "repositories": [
@@ -119,6 +117,6 @@
             }
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }

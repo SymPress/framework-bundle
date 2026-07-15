@@ -54,6 +54,14 @@ The QA script runs PHPCS, PHPStan and PHPUnit. The GitHub workflow uses the
 shared SymPress workflow set and the organization `.github` repository provides
 issue and community templates.
 
+The separate cache-backend smoke runs the native adapters against real Redis
+and Memcached services in CI. Run it locally with both PHP extensions and
+services available:
+
+```sh
+SYMPRESS_LIVE_CACHE_TESTS=1 composer tests:backends
+```
+
 ## Cache Pool Configuration
 
 The bundle provides defaults that work without project config. Projects can override the `framework.cache` parameter in a SymPress config file:

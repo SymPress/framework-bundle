@@ -91,6 +91,10 @@
             "Composer\\Config::disableProcessTimeout",
             "qa tests"
         ],
+        "tests:backends": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpunit --configuration phpunit.xml.dist --group live-cache --no-coverage"
+        ],
         "test": [
             "@tests"
         ],

@@ -27,11 +27,11 @@
         "symfony/routing": "^8.0",
         "symfony/service-contracts": "^3.6",
         "symfony/yaml": "^8.0",
-        "sympress/kernel": "^1.0@dev"
+        "sympress/kernel": "^1.1.1"
     },
     "require-dev": {
         "brain/monkey": "^2.6",
-        "sympress/qa": "dev-main"
+        "sympress/qa": "^0.1.2"
     },
     "suggest": {
         "symfony/asset": "Enables FrameworkBundle asset package integration.",
@@ -112,15 +112,6 @@
             "phpstan/extension-installer": true
         }
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "./../*",
-            "options": {
-                "symlink": true
-            }
-        }
-    ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

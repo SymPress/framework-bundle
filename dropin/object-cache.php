@@ -5,7 +5,7 @@ declare(strict_types=1);
 /*
  * sympress-framework-object-cache
  *
- * Portable object-cache.php delegator for wecodemore/wpstarter and the
+ * Portable object-cache.php delegator for sympress/runtime and the
  * SymPress runtime fallback installer.
  */
 

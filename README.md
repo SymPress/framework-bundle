@@ -125,8 +125,8 @@ Supported drivers are `array`, `filesystem`, `apcu`, `redis`, `memcached`, `pdo`
 ## Object Cache Drop-In
 
 The canonical drop-in source is `vendor/sympress/framework-bundle/dropin/object-cache.php`.
-Projects managed by `wecodemore/wpstarter` should publish that file into
-`WP_CONTENT_DIR/object-cache.php` through the WP Starter `dropins` step:
+Projects managed by `sympress/runtime` should publish that file into
+`WP_CONTENT_DIR/object-cache.php` through the SymPress Runtime `dropins` step:
 
 ```json
 {
@@ -139,15 +139,15 @@ Projects managed by `wecodemore/wpstarter` should publish that file into
 Run only the drop-in publish step when the source changes:
 
 ```bash
-composer wpstarter dropins --no-interaction
+composer sympress-runtime dropins --no-interaction
 ```
 
-The bundle also installs the same portable delegator into `WP_CONTENT_DIR` as a fallback for projects without WP Starter.
+The bundle also installs the same portable delegator into `WP_CONTENT_DIR` as a fallback for projects without SymPress Runtime.
 Managed SymPress drop-ins are only rewritten when their contents change and third-party drop-ins without the `sympress-framework-object-cache` marker are left untouched by the runtime installer.
-WP Starter remains the preferred owner in WP Starter projects because it publishes the drop-in during Composer/project setup instead of waiting for the first WordPress request.
+SymPress Runtime remains the preferred owner in SymPress Runtime projects because it publishes the drop-in during Composer/project setup instead of waiting for the first WordPress request.
 
 The delegator resolves the Composer autoloader from `SYMPRESS_PROJECT_DIR`, `APP_PROJECT_DIR`, `WP_CONTENT_DIR`, `ABSPATH`, or nearby parent directories; `SYMPRESS_COMPOSER_AUTOLOAD` and `SYMPRESS_OBJECT_CACHE_FUNCTIONS` can override those paths for custom layouts.
-This makes the same file work when copied by WP Starter, symlinked from `content-dev`, or installed by the runtime fallback.
+This makes the same file work when copied by SymPress Runtime, symlinked from `content-dev`, or installed by the runtime fallback.
 If a persistent backend cannot be initialized, the drop-in logs or warns about the backend failure before falling back to request-local array cache.
 WP-CLI cache flushes run directly in the current CLI process and never create temporary PHP endpoints in the web root.
 Redis and Memcached use native object-cache backends instead of Symfony internals for WordPress counter semantics. `add`, `replace`, `incr` and `decr` are mapped to backend-native atomic operations where the backend supports them; Redis counters use a Lua script so missing keys are not created and decrements clamp to zero like WordPress expects. Existing non-numeric counter values follow WordPress core semantics and are treated as zero. Flushes use versioned namespaces, so group/runtime invalidation does not depend on scanning or reflecting backend internals. The other Symfony-backed drivers keep best-effort semantics because PSR-6 does not expose cross-process compare-and-swap primitives.
@@ -156,12 +156,12 @@ Native Redis and Memcached payloads are signed when `SYMPRESS_CACHE_SECRET`, `AP
 
 Operational notes:
 
-- `composer wpstarter dropins` can overwrite an existing `object-cache.php`
-  unless `prevent-overwrite` blocks that path. Do not enable this drop-in
+- `composer sympress-runtime dropins` preserves unmanaged targets in native mode
+  and respects `prevent-overwrite`. Do not enable this drop-in
   alongside another object-cache drop-in.
 - The portable delegator performs a few early `is_file()` checks to resolve the
-  Composer autoloader. For standard WP Starter layouts this avoids absolute
+  Composer autoloader. For standard SymPress Runtime layouts this avoids absolute
   build paths while keeping request overhead small.
 - Existing deployments with an older generated drop-in keep using it until
-  WP Starter republishes the file or the runtime fallback installer rewrites a
+  SymPress Runtime republishes the file or the runtime fallback installer rewrites a
   managed SymPress drop-in.

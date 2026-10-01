@@ -98,12 +98,10 @@ PHP,
 
     public function testInstalledDropInInitializesWithConfiguredProjectDir(): void
     {
-        $rootDir = dirname(__DIR__, 4);
+        $rootDir = dirname(__DIR__, 2);
         $rootAutoload = $rootDir . '/vendor/autoload.php';
 
-        if (!is_file($rootAutoload)) {
-            self::markTestSkipped('Root Composer autoload file is not available.');
-        }
+        self::assertFileExists($rootAutoload);
 
         $contentDir = sys_get_temp_dir() . '/sympress-framework-test-' . bin2hex(random_bytes(4));
         mkdir($contentDir);
@@ -142,11 +140,9 @@ PHP,
 
     public function testDropInCopiedBySymPressRuntimeCanResolveProjectLayout(): void
     {
-        $rootDir = dirname(__DIR__, 4);
+        $rootDir = dirname(__DIR__, 2);
 
-        if (!is_file($rootDir . '/vendor/autoload.php')) {
-            self::markTestSkipped('Root Composer autoload file is not available.');
-        }
+        self::assertFileExists($rootDir . '/vendor/autoload.php');
 
         $projectDir = sys_get_temp_dir() . '/sympress-framework-runtime-' . bin2hex(random_bytes(4));
         $contentDir = $projectDir . '/public/wp-content';
@@ -158,9 +154,7 @@ PHP,
                 self::markTestSkipped('Symlinks are not available.');
             }
 
-            if (!@symlink($rootDir . '/packages', $projectDir . '/packages')) {
-                self::markTestSkipped('Symlinks are not available.');
-            }
+            mkdir($projectDir . '/packages');
 
             self::assertTrue(
                 copy(dirname(__DIR__, 2) . '/dropin/object-cache.php', $contentDir . '/object-cache.php'),
@@ -224,5 +218,19 @@ PHP,
         }
 
         rmdir($path);
+    }
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testFileModificationPolicyPreventsInstallation(): void
+    {
+        define('DISALLOW_FILE_MODS', true);
+        $directory = sys_get_temp_dir() . '/sympress-disallowed-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        try {
+            self::assertFalse((new DropInInstaller(dirname(__DIR__, 2), $directory))->install());
+            self::assertFileDoesNotExist($directory . '/object-cache.php');
+        } finally {
+            rmdir($directory);
+        }
     }
 }

@@ -33,4 +33,27 @@ final class CacheAdapterFactoryTest extends TestCase
         self::assertSame('value', $backend->get('key', $found));
         self::assertTrue($found);
     }
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testPublicFilesystemPathsFallBackWithoutWritingCacheFiles(): void
+    {
+        $directory = sys_get_temp_dir() . '/sympress-public-cache-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        define('WP_CONTENT_DIR', $directory);
+        $link = $directory . '-link';
+        symlink($directory, $link);
+        $previousErrorLog = ini_set('error_log', '/dev/null');
+        try {
+            $backend = (new CacheAdapterFactory())->createPersistent(new CacheConfig('filesystem', ['directory' => $directory . '/cache'], null, false, 0, 'test'));
+            self::assertTrue($backend->set('private', 'sensitive'));
+            self::assertDirectoryDoesNotExist($directory . '/cache');
+            $linked = (new CacheAdapterFactory())->createPersistent(new CacheConfig('filesystem', ['directory' => $link . '/new-cache'], null, false, 0, 'test'));
+            self::assertTrue($linked->set('private', 'sensitive'));
+            self::assertDirectoryDoesNotExist($directory . '/new-cache');
+        } finally {
+            ini_set('error_log', is_string($previousErrorLog) ? $previousErrorLog : '');
+            unlink($link);
+            rmdir($directory);
+        }
+    }
 }

@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SymPress\Framework\ObjectCache\NativeMemcachedObjectCacheAdapter;
 use SymPress\Framework\ObjectCache\NativeRedisObjectCacheAdapter;
+use SymPress\Framework\ObjectCache\ObjectCacheValueCodec;
 
 #[Group('live-cache')]
 final class NativeObjectCacheBackendSmokeTest extends TestCase
@@ -24,7 +25,12 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         self::assertTrue(class_exists(\Redis::class), 'The redis PHP extension is required.');
         $redis = new \Redis();
         $this->connect(fn (): bool => $redis->connect('127.0.0.1', 6379, 1.0));
-        $cache = new NativeRedisObjectCacheAdapter($redis, 'sympress-smoke-' . bin2hex(random_bytes(6)));
+        $cache = new NativeRedisObjectCacheAdapter($redis, 'sympress-smoke-' . bin2hex(random_bytes(6)), new ObjectCacheValueCodec('review-secret'));
+
+        self::assertTrue($cache->set('object', (object) ['date' => new \DateTimeImmutable('2026-10-01')]));
+        $decoded = $cache->get('object');
+        self::assertInstanceOf(\stdClass::class, $decoded);
+        self::assertSame('2026-10-01', $decoded->date->format('Y-m-d'));
 
         self::assertTrue($cache->set('count', 1));
         self::assertSame(1, $cache->get('count'));
@@ -45,7 +51,13 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         $cache = new NativeMemcachedObjectCacheAdapter(
             $memcached,
             'sympress-smoke-' . bin2hex(random_bytes(6)),
+            new ObjectCacheValueCodec('review-secret'),
         );
+
+        self::assertTrue($cache->set('object', (object) ['date' => new \DateTimeImmutable('2026-10-01')]));
+        $decoded = $cache->get('object');
+        self::assertInstanceOf(\stdClass::class, $decoded);
+        self::assertSame('2026-10-01', $decoded->date->format('Y-m-d'));
 
         self::assertTrue($cache->set('count', 1));
         self::assertSame(1, $cache->get('count'));

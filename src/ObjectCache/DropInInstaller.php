@@ -16,6 +16,11 @@ final class DropInInstaller
 
     public function install(): bool
     {
+        if ((function_exists('wp_is_file_mod_allowed') && !wp_is_file_mod_allowed('sympress_object_cache'))
+            || (defined('DISALLOW_FILE_MODS') && constant('DISALLOW_FILE_MODS'))) {
+            return false;
+        }
+
         $contentDir = $this->contentDir();
 
         if ($contentDir === null || !is_dir($contentDir)) {

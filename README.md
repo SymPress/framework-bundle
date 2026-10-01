@@ -142,9 +142,9 @@ Run only the drop-in publish step when the source changes:
 composer sympress-runtime dropins --no-interaction
 ```
 
-The bundle also installs the same portable delegator into `WP_CONTENT_DIR` as a fallback for projects without SymPress Runtime.
+Projects without SymPress Runtime can explicitly call `DropInInstaller::install()` during setup, or dispatch `sympress_setup_object_cache`. The bundle never scans or publishes the drop-in during ordinary requests. Installation respects `wp_is_file_mod_allowed()` and `DISALLOW_FILE_MODS`.
 Managed SymPress drop-ins are only rewritten when their contents change and third-party drop-ins without the `sympress-framework-object-cache` marker are left untouched by the runtime installer.
-SymPress Runtime remains the preferred owner in SymPress Runtime projects because it publishes the drop-in during Composer/project setup instead of waiting for the first WordPress request.
+SymPress Runtime remains the preferred owner in SymPress Runtime projects because it publishes the drop-in during Composer/project setup instead of an explicit application setup step.
 
 The delegator resolves the Composer autoloader from `SYMPRESS_PROJECT_DIR`, `APP_PROJECT_DIR`, `WP_CONTENT_DIR`, `ABSPATH`, or nearby parent directories; `SYMPRESS_COMPOSER_AUTOLOAD` and `SYMPRESS_OBJECT_CACHE_FUNCTIONS` can override those paths for custom layouts.
 This makes the same file work when copied by SymPress Runtime, symlinked from `content-dev`, or installed by the runtime fallback.
@@ -163,5 +163,26 @@ Operational notes:
   Composer autoloader. For standard SymPress Runtime layouts this avoids absolute
   build paths while keeping request overhead small.
 - Existing deployments with an older generated drop-in keep using it until
-  SymPress Runtime republishes the file or the runtime fallback installer rewrites a
+  SymPress Runtime republishes the file or an explicit setup installer rewrites a
   managed SymPress drop-in.
+
+### Cache payload and filesystem boundaries
+
+When a secret is configured, unsigned `sympress-cache-v1` and unframed string
+payloads are misses; legacy decoding remains available only to the explicitly
+secretless codec. Counter integers remain native numeric values. Signed payloads
+validate the HMAC before deserializing. The codec permits only `stdClass`,
+`WP_Post`, `WP_Term`, `WP_Comment`, `WP_User`, `WP_Error`, `WP_Site`, `WP_Network`, `DateTime`,
+`DateTimeImmutable`, and `DateTimeZone`. Unsupported objects (including nested
+objects) are rejected rather than invoking application magic methods. Custom
+application cache objects need a reviewed codec extension or plain data arrays.
+
+Filesystem cache defaults to the system temporary directory. Directories beneath
+`WP_CONTENT_DIR` or the declared HTTP document root are rejected; configure a
+private path outside every location served by your web server. Initialization
+failure diagnostics include the exception class and never the exception text,
+which can contain a backend DSN or credentials.
+
+`wordpress.content_url` is an environment placeholder resolved through
+`WordPressContentUrlProcessor` when the container runs, so container compilation
+does not capture a build host URL. Its runtime value comes from `content_url('/')`.

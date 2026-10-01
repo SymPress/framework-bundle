@@ -25,6 +25,7 @@ final class CacheConfigFactoryTest extends TestCase
             ] as $name
         ) {
             putenv($name);
+            unset($_ENV[$name], $_SERVER[$name]);
         }
     }
 
@@ -74,5 +75,30 @@ final class CacheConfigFactoryTest extends TestCase
         $config = (new CacheConfigFactory())->create();
 
         self::assertSame('application-secret', $config->secret);
+    }
+
+    public function testNativeDotenvConfigurationDoesNotExportCredentials(): void
+    {
+        $_ENV['SYMPRESS_CACHE_DRIVER'] = 'redis';
+        $_SERVER['SYMPRESS_CACHE_DSN'] = 'redis://redis:6379';
+        $_ENV['SYMPRESS_CACHE_SECRET'] = 'dotenv-canary-secret';
+        $_SERVER['SYMPRESS_CACHE_IN_MEMORY'] = 'false';
+        $config = (new CacheConfigFactory())->create();
+        self::assertSame('redis', $config->driver);
+        self::assertSame('redis://redis:6379', $config->dsn);
+        self::assertSame('dotenv-canary-secret', $config->secret);
+        self::assertFalse($config->inMemory);
+        self::assertFalse(getenv('SYMPRESS_CACHE_SECRET'));
+    }
+
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testExplicitConstantsOverrideDotenvAndProcessValues(): void
+    {
+        define('SYMPRESS_CACHE_DRIVER', 'array');
+        $_ENV['SYMPRESS_CACHE_DRIVER'] = 'redis';
+        $_SERVER['SYMPRESS_CACHE_DRIVER'] = 'memcached';
+        putenv('SYMPRESS_CACHE_DRIVER=filesystem');
+        self::assertSame('array', (new CacheConfigFactory())->create()->driver);
     }
 }

@@ -109,7 +109,10 @@ Pool configuration accepts Symfony-style `adapter` or `adapters` keys, provider-
 
 ## Object Cache Configuration
 
-The WordPress drop-in can be configured with constants or environment variables:
+The WordPress drop-in can be configured with constants or environment variables.
+Constants take precedence; native Runtime/Symfony Dotenv values in `$_ENV` and
+`$_SERVER` are consumed before the process environment. Credentials from `.env`
+need no `putenv()` export to child processes:
 
 ```php
 define('SYMPRESS_CACHE_DRIVER', 'redis');

@@ -63,7 +63,8 @@ final class CacheConfigFactory
             return is_scalar($value) ? (string) $value : null;
         }
 
-        $value = getenv($name);
+        // Symfony Dotenv / SymPress Runtime intentionally avoid exporting secrets with putenv().
+        $value = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
 
         return is_string($value) && $value !== '' ? $value : null;
     }

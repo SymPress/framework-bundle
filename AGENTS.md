@@ -30,7 +30,7 @@ This bundle bridges Symfony FrameworkBundle services into the SymPress kernel an
 
 ## Cross-repository impact
 
-The bundle depends on `sympress/kernel` discovery and container lifecycle. WP Starter may publish the drop-in during setup. Coordinate metadata, service aliases and drop-in path changes with kernel and a runnable WordPress consumer.
+The bundle depends on `sympress/kernel` discovery and container lifecycle. SymPress Runtime may publish the drop-in during setup. Coordinate metadata, service aliases and drop-in path changes with kernel and a runnable WordPress consumer.
 
 ## Definition of done
 

@@ -140,7 +140,7 @@ PHP,
         }
     }
 
-    public function testDropInCopiedByWpStarterCanResolveProjectLayout(): void
+    public function testDropInCopiedBySymPressRuntimeCanResolveProjectLayout(): void
     {
         $rootDir = dirname(__DIR__, 4);
 
@@ -148,7 +148,7 @@ PHP,
             self::markTestSkipped('Root Composer autoload file is not available.');
         }
 
-        $projectDir = sys_get_temp_dir() . '/sympress-framework-wpstarter-' . bin2hex(random_bytes(4));
+        $projectDir = sys_get_temp_dir() . '/sympress-framework-runtime-' . bin2hex(random_bytes(4));
         $contentDir = $projectDir . '/public/wp-content';
 
         mkdir($contentDir, 0777, true);

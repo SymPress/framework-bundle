@@ -390,12 +390,15 @@ return static function (ContainerConfigurator $container): void {
     $services->alias(SimpleCacheInterface::class, 'cache.simple')
         ->public();
 
+    $services->set(\SymPress\Framework\DependencyInjection\WordPressContentUrlProcessor::class)
+        ->tag('container.env_var_processor');
+
     $services->set(DropInInstaller::class)
         ->args(['%kernel.project_dir%', '%wordpress.content_dir%'])
         ->public();
 
     $services->set(DropInInstallerHook::class)
-        ->tag('kernel.hook', ['hook' => 'init', 'method' => 'install', 'priority' => 1]);
+        ->tag('kernel.hook', ['hook' => 'sympress_setup_object_cache', 'method' => 'install']);
 
     $services->set(ScheduledPurgeHook::class)
         ->tag('kernel.hook', ['hook' => 'init', 'method' => 'schedule', 'priority' => 20])

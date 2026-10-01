@@ -48,10 +48,12 @@ final class ObjectCacheValueCodec
         }
 
         if (str_starts_with($payload, self::LEGACY_SERIALIZED_PREFIX)) {
-            return $this->unserializePayload(substr($payload, strlen(self::LEGACY_SERIALIZED_PREFIX)));
+            return $this->normalizedSecret() === null
+                ? $this->unserializePayload(substr($payload, strlen(self::LEGACY_SERIALIZED_PREFIX)))
+                : false;
         }
 
-        return $payload;
+        return $this->normalizedSecret() === null ? $payload : false;
     }
 
     private function decodeSignedPayload(string $payload): mixed
@@ -91,7 +93,18 @@ final class ObjectCacheValueCodec
 
     private function unserializePayload(string $payload): mixed
     {
-        $value = @unserialize($payload);
+        // Only inert core cache data objects may be reconstructed. Application classes
+        // must opt into a separate codec rather than executing arbitrary magic methods.
+        $allowed = ['stdClass', 'WP_Post', 'WP_Term', 'WP_Comment', 'WP_User', 'WP_Error', 'WP_Site', 'WP_Network', 'DateTime', 'DateTimeImmutable', 'DateTimeZone'];
+        try {
+            $value = @unserialize($payload, ['allowed_classes' => $allowed]);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if ($this->containsIncompleteObject($value)) {
+            return false;
+        }
 
         if ($value === false && $payload !== 'b:0;') {
             return false;
@@ -100,4 +113,20 @@ final class ObjectCacheValueCodec
         return $value;
     }
 
+    private function containsIncompleteObject(mixed $value, int $depth = 0): bool
+    {
+        if ($value instanceof \__PHP_Incomplete_Class || $depth > 64) {
+            return true;
+        }
+
+        if (is_array($value) || is_object($value)) {
+            foreach ((array) $value as $item) {
+                if ($this->containsIncompleteObject($item, $depth + 1)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

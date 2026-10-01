@@ -29,4 +29,41 @@ final class ObjectCacheValueCodecTest extends TestCase
 
         self::assertFalse($codec->decode($tampered));
     }
+    public function testUnsignedLegacyValuesAreRejectedWithConfiguredSecret(): void
+    {
+        $signed = new ObjectCacheValueCodec('secret');
+        $legacy = new ObjectCacheValueCodec();
+        self::assertFalse($signed->decode($legacy->encode(['sensitive' => true])));
+        self::assertSame(['sensitive' => true], $legacy->decode($legacy->encode(['sensitive' => true])));
+        self::assertSame(42, $signed->decode($signed->encode(42)));
+        foreach (['sympress-cache-v2:bad', 'sympress-cache-v2:bad:%%%'] as $malformed) {
+            self::assertFalse($signed->decode($malformed));
+        }
+    }
+
+    public function testDisallowedMagicObjectsCannotBeInstantiated(): void
+    {
+        $object = new CacheWakeupProbe();
+        $codec = new ObjectCacheValueCodec('secret');
+        self::assertFalse($codec->decode($codec->encode(['nested' => $object])));
+        self::assertSame(0, CacheWakeupProbe::$woken);
+    }
+
+    public function testAllowedDateObjectsKeepMeaningfulBehavior(): void
+    {
+        $codec = new ObjectCacheValueCodec('secret');
+        $decoded = $codec->decode($codec->encode(new \DateTimeImmutable('2026-10-01T12:00:00+00:00')));
+        self::assertInstanceOf(\DateTimeImmutable::class, $decoded);
+        self::assertSame('2026-10-02', $decoded->modify('+1 day')->format('Y-m-d'));
+    }
+}
+
+final class CacheWakeupProbe
+{
+    public static int $woken = 0;
+
+    public function __wakeup(): void
+    {
+        self::$woken++;
+    }
 }

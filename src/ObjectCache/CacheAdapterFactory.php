@@ -59,7 +59,37 @@ final class CacheAdapterFactory
             ?? $this->stringArg($config, 'path')
             ?? $this->defaultCacheDirectory();
 
+        $content = defined('WP_CONTENT_DIR') ? $this->resolvedPath(WP_CONTENT_DIR) : null;
+        $root = isset($_SERVER['DOCUMENT_ROOT']) && is_string($_SERVER['DOCUMENT_ROOT'])
+            ? $this->resolvedPath($_SERVER['DOCUMENT_ROOT']) : null;
+        $resolved = $this->resolvedPath($directory);
+
+        foreach ([$content, $root] as $publicRoot) {
+            if (is_string($publicRoot) && ($resolved === $publicRoot || str_starts_with($resolved, $publicRoot . '/'))) {
+                throw new \RuntimeException('Filesystem object cache must be outside publicly served directories.');
+            }
+        }
+
         return new FilesystemAdapter($config->prefix, 0, $directory);
+    }
+
+    private function resolvedPath(string $path): string
+    {
+        $absolute = \Symfony\Component\Filesystem\Path::canonicalize(
+            \Symfony\Component\Filesystem\Path::makeAbsolute($path, getcwd() ?: sys_get_temp_dir()),
+        );
+        $ancestor = $absolute;
+        $suffix = '';
+        while (($resolved = realpath($ancestor)) === false) {
+            $parent = dirname($ancestor);
+            if ($parent === $ancestor) {
+                return $absolute;
+            }
+            $suffix = '/' . basename($ancestor) . $suffix;
+            $ancestor = $parent;
+        }
+
+        return rtrim($resolved, '/') . $suffix;
     }
 
     private function createRedis(CacheConfig $config): ObjectCacheBackendInterface
@@ -138,10 +168,6 @@ final class CacheAdapterFactory
 
     private function defaultCacheDirectory(): string
     {
-        if (defined('WP_CONTENT_DIR')) {
-            return WP_CONTENT_DIR . '/cache/sympress';
-        }
-
         return sys_get_temp_dir() . '/sympress-cache';
     }
 
@@ -150,7 +176,7 @@ final class CacheAdapterFactory
         $message = sprintf(
             'SymPress object cache backend "%s" could not be initialized: %s. Falling back to request-local array cache.',
             $config->driver,
-            $exception->getMessage(),
+            $exception::class,
         );
 
         if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {

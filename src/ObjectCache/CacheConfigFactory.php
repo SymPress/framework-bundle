@@ -21,11 +21,27 @@ final class CacheConfigFactory
             $this->stringValue('SYMPRESS_CACHE_DSN') ?? $this->dsnFromArgs($driverArgs),
             $this->boolValue('SYMPRESS_CACHE_IN_MEMORY') ?? true,
             $this->intValue('SYMPRESS_CACHE_PURGE_INTERVAL') ?? self::DEFAULT_PURGE_INTERVAL,
-            $this->stringValue('SYMPRESS_CACHE_PREFIX') ?? 'sympress.wp',
+            $this->scopedPrefix(),
             $this->stringValue('SYMPRESS_CACHE_SECRET')
-                ?? $this->stringValue('APP_SECRET')
-                ?? $this->stringValue('AUTH_KEY'),
+                ?? $this->stringValue('APP_SECRET'),
         );
+    }
+
+    private function scopedPrefix(): string
+    {
+        $project = $this->stringValue('SYMPRESS_PROJECT_DIR')
+            ?? $this->stringValue('APP_PROJECT_DIR')
+            ?? $this->stringValue('ABSPATH')
+            ?? $this->stringValue('WP_CONTENT_DIR')
+            ?? (getcwd() ?: __DIR__);
+        $project = realpath($project) ?: $project;
+        $environment = $this->stringValue('APP_ENV')
+            ?? $this->stringValue('APP_RUNTIME_ENV')
+            ?? $this->stringValue('WP_ENVIRONMENT_TYPE')
+            ?? 'production';
+
+        return ($this->stringValue('SYMPRESS_CACHE_PREFIX') ?? 'sympress.wp')
+            . '.' . substr(hash('sha256', $project . "\0" . $environment), 0, 24);
     }
 
     private function normalizeDriver(string $driver): string

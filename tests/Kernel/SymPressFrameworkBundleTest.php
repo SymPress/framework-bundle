@@ -14,15 +14,23 @@ use Symfony\Component\Filesystem\Filesystem;
 final class SymPressFrameworkBundleTest extends TestCase
 {
     private string $cacheDir;
+    private mixed $previousSecret;
 
     protected function setUp(): void
     {
         $this->cacheDir = sprintf('%s/sympress-framework-bundle-%s', sys_get_temp_dir(), uniqid('', true));
+        $this->previousSecret = $_ENV['APP_SECRET'] ?? null;
+        $_ENV['APP_SECRET'] = str_repeat('test-only-secret-', 3);
     }
 
     protected function tearDown(): void
     {
         (new Filesystem())->remove($this->cacheDir);
+        if ($this->previousSecret === null) {
+            unset($_ENV['APP_SECRET']);
+        } else {
+            $_ENV['APP_SECRET'] = $this->previousSecret;
+        }
     }
 
     public function testBuildsRuntimeContainerWithSymfonyFrameworkBundleServices(): void

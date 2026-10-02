@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 use SymPress\Framework\ObjectCache\NativeMemcachedObjectCacheAdapter;
 use SymPress\Framework\ObjectCache\NativeRedisObjectCacheAdapter;
 use SymPress\Framework\ObjectCache\ObjectCacheValueCodec;
+use SymPress\Framework\ObjectCache\CacheAdapterFactory;
+use SymPress\Framework\ObjectCache\CacheConfig;
 
 #[Group('live-cache')]
 final class NativeObjectCacheBackendSmokeTest extends TestCase
@@ -24,7 +26,7 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
     {
         self::assertTrue(class_exists(\Redis::class), 'The redis PHP extension is required.');
         $redis = new \Redis();
-        $this->connect(fn (): bool => $redis->connect('127.0.0.1', 6379, 1.0));
+        $this->connect(fn (): bool => $redis->connect('127.0.0.1', (int) (getenv('SYMPRESS_TEST_REDIS_PORT') ?: 6379), 1.0));
         $cache = new NativeRedisObjectCacheAdapter($redis, 'sympress-smoke-' . bin2hex(random_bytes(6)), new ObjectCacheValueCodec('review-secret'));
 
         self::assertTrue($cache->set('object', (object) ['date' => new \DateTimeImmutable('2026-10-01')]));
@@ -46,7 +48,7 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
     {
         self::assertTrue(class_exists(\Memcached::class), 'The memcached PHP extension is required.');
         $memcached = new \Memcached();
-        self::assertTrue($memcached->addServer('127.0.0.1', 11211));
+        self::assertTrue($memcached->addServer('127.0.0.1', (int) (getenv('SYMPRESS_TEST_MEMCACHED_PORT') ?: 11211)));
         $this->connect(static fn (): bool => $memcached->getVersion() !== false);
         $cache = new NativeMemcachedObjectCacheAdapter(
             $memcached,
@@ -67,6 +69,27 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         self::assertFalse($cache->get('count'));
 
         $memcached->quit();
+    }
+
+    public function testFactoriesUseSignedNativeBackendsWithStrongSecrets(): void
+    {
+        foreach (['redis', 'memcached'] as $driver) {
+            $port = $driver === 'redis'
+                ? (int) (getenv('SYMPRESS_TEST_REDIS_PORT') ?: 6379)
+                : (int) (getenv('SYMPRESS_TEST_MEMCACHED_PORT') ?: 11211);
+            $config = new CacheConfig($driver, [], $driver . '://127.0.0.1:' . $port, false, 0, 'sympress-factory-smoke-' . bin2hex(random_bytes(6)), str_repeat('test-only-secret-', 3));
+            $factory = new CacheAdapterFactory();
+            $backend = $factory->createPersistent($config);
+            self::assertInstanceOf($driver === 'redis' ? NativeRedisObjectCacheAdapter::class : NativeMemcachedObjectCacheAdapter::class, $backend);
+            self::assertTrue($backend->set('value', (object) ['driver' => $driver]));
+            $found = false;
+            self::assertEquals((object) ['driver' => $driver], $factory->createPersistent($config)->get('value', $found));
+            self::assertTrue($found);
+            self::assertTrue($backend->set('counter', 1));
+            self::assertSame(3, $backend->incr('counter', 2));
+            self::assertSame(0, $backend->decr('counter', 9));
+            self::assertTrue($backend->clear());
+        }
     }
 
     /** @param callable(): bool $probe */

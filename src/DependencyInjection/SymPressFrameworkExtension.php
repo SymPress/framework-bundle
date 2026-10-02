@@ -30,6 +30,11 @@ final class SymPressFrameworkExtension extends FrameworkExtension
 
         if ($configuration !== null) {
             $config = (new Processor())->processConfiguration($configuration, $configs);
+            $secret = $config['secret'] ?? null;
+            $resolved = is_string($secret) ? $container->resolveEnvPlaceholders($secret, true) : null;
+            if (!is_string($resolved) || strlen($resolved) < 32) {
+                throw new \InvalidArgumentException('FrameworkBundle requires APP_SECRET or framework.secret of at least 32 bytes.');
+            }
             $container->setParameter('framework.cache', $config['cache'] ?? []);
         }
 

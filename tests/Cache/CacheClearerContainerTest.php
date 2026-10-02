@@ -29,6 +29,8 @@ final class CacheClearerContainerTest extends TestCase
     #[DataProvider('environments')]
     public function testNativeClearersAndDebugWarmerSurviveRuntimeCompilationAndFullLint(bool $debug): void
     {
+        $previousSecret = $_ENV['APP_SECRET'] ?? null;
+        $_ENV['APP_SECRET'] = str_repeat('test-only-secret-', 3);
         $projectDir = dirname(__DIR__, 2);
         $cacheDir = sys_get_temp_dir() . '/sympress-clearer-' . bin2hex(random_bytes(8));
         $kernel = new class ($projectDir, $debug, $cacheDir) extends AbstractKernel {
@@ -107,6 +109,11 @@ final class CacheClearerContainerTest extends TestCase
             self::assertFalse($appPool->hasItem('probe'));
         } finally {
             (new Filesystem())->remove($cacheDir);
+            if ($previousSecret === null) {
+                unset($_ENV['APP_SECRET']);
+            } else {
+                $_ENV['APP_SECRET'] = $previousSecret;
+            }
         }
     }
 }

@@ -22,11 +22,34 @@ final class CacheConfigFactoryTest extends TestCase
                 'SYMPRESS_CACHE_SECRET',
                 'APP_SECRET',
                 'AUTH_KEY',
+                'APP_PROJECT_DIR',
+                'APP_ENV',
             ] as $name
         ) {
             putenv($name);
             unset($_ENV[$name], $_SERVER[$name]);
         }
+    }
+
+    public function testNamespaceSeparatesProjectsAndEnvironmentsEvenWithExplicitPrefix(): void
+    {
+        $_ENV['APP_PROJECT_DIR'] = '/sites/first';
+        $_ENV['APP_ENV'] = 'production';
+        $_ENV['SYMPRESS_CACHE_PREFIX'] = 'shared-prefix';
+        $factory = new CacheConfigFactory();
+        $first = $factory->create()->prefix;
+        self::assertSame($first, $factory->create()->prefix);
+        $_ENV['APP_PROJECT_DIR'] = '/sites/second';
+        self::assertNotSame($first, $factory->create()->prefix);
+        $_ENV['APP_PROJECT_DIR'] = '/sites/first';
+        $_ENV['APP_ENV'] = 'staging';
+        self::assertNotSame($first, $factory->create()->prefix);
+    }
+
+    public function testWordPressAuthKeyDoesNotEnablePersistentCacheSigning(): void
+    {
+        $_ENV['AUTH_KEY'] = str_repeat('test-only-auth-key-', 3);
+        self::assertNull((new CacheConfigFactory())->create()->secret);
     }
 
     public function testCreatesConfigFromSympressEnvironment(): void

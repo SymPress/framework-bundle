@@ -33,6 +33,12 @@ final class CacheAdapterFactory
 
     private function createAdapter(CacheConfig $config): ObjectCacheBackendInterface
     {
+        if (in_array($config->driver, ['apcu', 'filesystem', 'redis', 'memcached', 'pdo', 'sqlite'], true)) {
+            if (!is_string($config->secret) || strlen($config->secret) < 32) {
+                throw new \RuntimeException('Persistent object cache requires a secret of at least 32 bytes.');
+            }
+        }
+
         return match ($config->driver) {
             'apcu' => new ObjectCacheAdapter($this->createApcu($config)),
             'filesystem' => new ObjectCacheAdapter($this->createFilesystem($config)),
@@ -46,18 +52,18 @@ final class CacheAdapterFactory
 
     private function createApcu(CacheConfig $config): AdapterInterface
     {
-        if (!ApcuAdapter::isSupported()) {
+        if (!ApcuAdapter::isSupported() || !apcu_enabled()) {
             return new ArrayAdapter();
         }
 
-        return new ApcuAdapter($config->prefix);
+        return new ApcuAdapter($config->prefix, marshaller: new ObjectCacheMarshaller($this->codec($config)));
     }
 
     private function createFilesystem(CacheConfig $config): AdapterInterface
     {
         $directory = $this->stringArg($config, 'directory')
             ?? $this->stringArg($config, 'path')
-            ?? $this->defaultCacheDirectory();
+            ?? $this->defaultCacheDirectory($config);
 
         $content = defined('WP_CONTENT_DIR') ? $this->resolvedPath(WP_CONTENT_DIR) : null;
         $root = isset($_SERVER['DOCUMENT_ROOT']) && is_string($_SERVER['DOCUMENT_ROOT'])
@@ -70,7 +76,7 @@ final class CacheAdapterFactory
             }
         }
 
-        return new FilesystemAdapter($config->prefix, 0, $directory);
+        return new FilesystemAdapter($config->prefix, 0, $directory, new ObjectCacheMarshaller($this->codec($config)));
     }
 
     private function resolvedPath(string $path): string
@@ -123,11 +129,11 @@ final class CacheAdapterFactory
         $dsn = $config->dsn
             ?? $this->stringArg($config, 'dsn')
             ?? $this->sqliteDsnFromArgs($config)
-            ?? sprintf('sqlite:%s/sympress-object-cache.sqlite', $this->defaultCacheDirectory());
+            ?? sprintf('sqlite:%s/sympress-object-cache.sqlite', $this->defaultCacheDirectory($config));
 
         $options = $config->driverArgs['options'] ?? [];
 
-        return new PdoAdapter($dsn, $config->prefix, 0, is_array($options) ? $options : []);
+        return new PdoAdapter($dsn, $config->prefix, 0, is_array($options) ? $options : [], new ObjectCacheMarshaller($this->codec($config)));
     }
 
     private function stringArg(CacheConfig $config, string $key): ?string
@@ -166,9 +172,24 @@ final class CacheAdapterFactory
         return $path !== null ? 'sqlite:' . $path : null;
     }
 
-    private function defaultCacheDirectory(): string
+    private function defaultCacheDirectory(CacheConfig $config): string
     {
-        return sys_get_temp_dir() . '/sympress-cache';
+        $user = function_exists('posix_geteuid') ? (string) posix_geteuid() : hash('sha256', get_current_user());
+        $root = sys_get_temp_dir() . '/sympress-cache-' . $user;
+        $directory = $root . '/' . substr(hash('sha256', $config->prefix), 0, 24);
+        foreach ([$root, $directory] as $path) {
+            if (is_link($path)) {
+                throw new \RuntimeException('Refusing a symlinked object-cache directory.');
+            }
+            if (!is_dir($path) && !mkdir($path, 0700, true) && !is_dir($path)) {
+                throw new \RuntimeException('Unable to create a private object-cache directory.');
+            }
+            if ((fileperms($path) & 0077) !== 0 || (function_exists('posix_geteuid') && fileowner($path) !== posix_geteuid())) {
+                throw new \RuntimeException('The private object-cache directory is accessible to another user.');
+            }
+        }
+
+        return $directory;
     }
 
     private function reportBackendFailure(CacheConfig $config, \Throwable $exception): void
@@ -190,7 +211,11 @@ final class CacheAdapterFactory
 
     private function codec(CacheConfig $config): ObjectCacheValueCodec
     {
-        return new ObjectCacheValueCodec($config->secret);
+        $secret = is_string($config->secret)
+            ? hash_hmac('sha256', 'sympress.object-cache:' . $config->prefix, $config->secret)
+            : null;
+
+        return new ObjectCacheValueCodec($secret);
     }
 
     private function assertRedisConnection(object $connection): void

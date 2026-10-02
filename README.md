@@ -26,7 +26,8 @@ Require the package in a SymPress project:
 composer require sympress/framework-bundle
 ```
 
-Production projects must provide a strong `APP_SECRET`. The bundle passes `APP_SECRET` directly to Symfony's
+Projects must provide a randomly generated `APP_SECRET` of at least 32 bytes. Missing or shorter
+secrets fail FrameworkBundle compilation. The bundle passes `APP_SECRET` directly to Symfony's
 FrameworkBundle and does not fall back to predictable project paths.
 
 The bundle is discovered through Composer metadata:
@@ -155,7 +156,19 @@ If a persistent backend cannot be initialized, the drop-in logs or warns about t
 WP-CLI cache flushes run directly in the current CLI process and never create temporary PHP endpoints in the web root.
 Redis and Memcached use native object-cache backends instead of Symfony internals for WordPress counter semantics. `add`, `replace`, `incr` and `decr` are mapped to backend-native atomic operations where the backend supports them; Redis counters use a Lua script so missing keys are not created and decrements clamp to zero like WordPress expects. Existing non-numeric counter values follow WordPress core semantics and are treated as zero. Flushes use versioned namespaces, so group/runtime invalidation does not depend on scanning or reflecting backend internals. The other Symfony-backed drivers keep best-effort semantics because PSR-6 does not expose cross-process compare-and-swap primitives.
 
-Native Redis and Memcached payloads are signed when `SYMPRESS_CACHE_SECRET`, `APP_SECRET` or `AUTH_KEY` is available. Treat persistent cache backends and the kernel cache directory as trusted infrastructure; do not expose Redis, Memcached, filesystem cache, SQLite/PDO cache files or debug container dumps to untrusted writers.
+All persistent WordPress drivers require `SYMPRESS_CACHE_SECRET` or `APP_SECRET` of at least 32 bytes;
+`AUTH_KEY` is not a signing-secret fallback. Missing or short object-cache secrets disable persistence
+and report the initialization failure before using request-local cache. Redis and Memcached retain
+native counter operations; APCu, filesystem and SQLite/PDO authenticate serialized values with the
+same signed codec before reconstructing objects. Treat persistent cache backends and the kernel
+cache directory as trusted infrastructure; do not expose them to untrusted writers.
+
+WordPress cache prefixes include a hash of the project root and environment, including when
+`SYMPRESS_CACHE_PREFIX` is set. Roots resolve from `SYMPRESS_PROJECT_DIR`, `APP_PROJECT_DIR`,
+`ABSPATH`, `WP_CONTENT_DIR`, then the working directory. Set a stable project root before loading
+the drop-in in custom layouts. Environment resolves from `APP_ENV`, `APP_RUNTIME_ENV`,
+`WP_ENVIRONMENT_TYPE`, then `production`. The signing key is also bound to this scoped prefix.
+This changes the cache identity on upgrade; existing cache records remain unused and refill normally.
 
 Operational notes:
 
@@ -180,7 +193,10 @@ validate the HMAC before deserializing. The codec permits only `stdClass`,
 objects) are rejected rather than invoking application magic methods. Custom
 application cache objects need a reviewed codec extension or plain data arrays.
 
-Filesystem cache defaults to the system temporary directory. Directories beneath
+Filesystem and default SQLite cache paths use a private per-user temporary directory with a
+separate project/environment namespace and mode 0700. APCu still requires trusted PHP-FPM pools:
+the extension can deserialize PHP objects written directly through its API before userland code runs.
+The SymPress marshaller writes signed strings only. Directories beneath
 `WP_CONTENT_DIR` or the declared HTTP document root are rejected; configure a
 private path outside every location served by your web server. Initialization
 failure diagnostics include the exception class and never the exception text,

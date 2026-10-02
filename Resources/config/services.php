@@ -49,6 +49,7 @@ use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\Cache\Marshaller\DefaultMarshaller;
 use Symfony\Component\Cache\Messenger\EarlyExpirationHandler;
 use Symfony\Component\Cache\Psr16Cache;
+use Symfony\Component\HttpKernel\CacheClearer\Psr6CacheClearer;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\NamespacedPoolInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
@@ -273,7 +274,10 @@ return static function (ContainerConfigurator $container): void {
         ->args([service('reverse_container')])
         ->tag('messenger.message_handler');
 
-    $services->set('cache.default_clearer', CachePoolClearer::class)
+    $services->set('cache.default_clearer', Psr6CacheClearer::class)
+        ->args([[]]);
+
+    $services->set(CachePoolClearer::class)
         ->args([[]]);
 
     $services->set('cache.system_clearer')

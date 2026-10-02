@@ -127,6 +127,10 @@ final class FrameworkCacheConfigurationPass implements CompilerPassInterface
             $container->getDefinition('cache.pool_pruner')->replaceArgument(0, new IteratorArgument($registered));
         }
 
+        if ($container->hasDefinition(CachePoolClearer::class)) {
+            $container->getDefinition(CachePoolClearer::class)->replaceArgument(0, new IteratorArgument($registered));
+        }
+
         if ($container->hasDefinition('cache.pool_registry')) {
             $container->getDefinition('cache.pool_registry')->replaceArgument(0, new IteratorArgument($registered));
             $container->getDefinition('cache.pool_registry')->replaceArgument(1, new IteratorArgument($taggable));

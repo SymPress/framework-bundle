@@ -27,10 +27,17 @@ composer require sympress/framework-bundle
 ```
 
 Projects must provide a randomly generated `APP_SECRET` of at least 32 bytes for production.
-An existing shorter value remains usable during an upgrade so container compilation can finish;
-persistent WordPress object caching stays disabled until a strong application/cache secret is supplied.
+An existing missing or shorter value remains usable during an upgrade: WordPress object caching,
+`cache.app` and custom application pools use request memory until a strong secret is supplied.
+This also works when updating the bundle with an existing Kernel 1.1.3 installation.
 Runtime Doctor checks this production requirement before deployment. The bundle passes `APP_SECRET`
 directly to Symfony's FrameworkBundle and does not derive a secret from project paths or `AUTH_KEY`.
+
+Application pools authenticate serialized payloads before restoring values, including filesystem,
+PDO/SQLite, APCu, Redis and Memcached adapters and configured custom marshallers. Existing unsigned
+entries become cache misses and refill normally after the upgrade. Application pools configured with
+PHP file or system adapters use signed filesystem storage instead. Symfony's own `cache.system`
+retains its trusted compiled-code storage and remains available without an application secret.
 
 The bundle is discovered through Composer metadata:
 

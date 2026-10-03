@@ -29,11 +29,12 @@ final class SymPressFrameworkExtensionTest extends TestCase
         self::assertIsArray($container->getParameter('framework.cache'));
     }
 
-    public function testRejectsShortSecretWithoutDisclosingIt(): void
+    public function testShortExistingSecretPreservesContainerBuildAvailability(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/at least 32 bytes/');
-        (new SymPressFrameworkExtension())->load([['secret' => 'test-only-short']], $this->container());
+        $container = $this->container();
+        (new SymPressFrameworkExtension())->load([['secret' => 'test-only-short']], $container);
+        self::assertTrue($container->hasDefinition('http_kernel'));
+        self::assertSame('test-only-short', $container->getParameter('kernel.secret'));
     }
 
     private function container(): ContainerBuilder

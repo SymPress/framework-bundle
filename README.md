@@ -26,9 +26,11 @@ Require the package in a SymPress project:
 composer require sympress/framework-bundle
 ```
 
-Projects must provide a randomly generated `APP_SECRET` of at least 32 bytes. Missing or shorter
-secrets fail FrameworkBundle compilation. The bundle passes `APP_SECRET` directly to Symfony's
-FrameworkBundle and does not fall back to predictable project paths.
+Projects must provide a randomly generated `APP_SECRET` of at least 32 bytes for production.
+An existing shorter value remains usable during an upgrade so container compilation can finish;
+persistent WordPress object caching stays disabled until a strong application/cache secret is supplied.
+Runtime Doctor checks this production requirement before deployment. The bundle passes `APP_SECRET`
+directly to Symfony's FrameworkBundle and does not derive a secret from project paths or `AUTH_KEY`.
 
 The bundle is discovered through Composer metadata:
 
@@ -150,23 +152,27 @@ Projects without SymPress Runtime can explicitly call `DropInInstaller::install(
 Managed SymPress drop-ins are only rewritten when their contents change and third-party drop-ins without the `sympress-framework-object-cache` marker are left untouched by the runtime installer.
 SymPress Runtime remains the preferred owner in SymPress Runtime projects because it publishes the drop-in during Composer/project setup instead of an explicit application setup step.
 
-The delegator resolves the Composer autoloader from `SYMPRESS_PROJECT_DIR`, `APP_PROJECT_DIR`, `WP_CONTENT_DIR`, `ABSPATH`, or nearby parent directories; `SYMPRESS_COMPOSER_AUTOLOAD` and `SYMPRESS_OBJECT_CACHE_FUNCTIONS` can override those paths for custom layouts.
+The delegator resolves the Composer autoloader from `APP_PROJECT_DIR`, `WP_CONTENT_DIR`, `ABSPATH`, or nearby active release directories, then uses `SYMPRESS_PROJECT_DIR` as a compatibility fallback; `SYMPRESS_COMPOSER_AUTOLOAD` and `SYMPRESS_OBJECT_CACHE_FUNCTIONS` can override those paths for custom layouts.
 This makes the same file work when copied by SymPress Runtime, symlinked from `content-dev`, or installed by the runtime fallback.
 If a persistent backend cannot be initialized, the drop-in logs or warns about the backend failure before falling back to request-local array cache.
 WP-CLI cache flushes run directly in the current CLI process and never create temporary PHP endpoints in the web root.
 Redis and Memcached use native object-cache backends instead of Symfony internals for WordPress counter semantics. `add`, `replace`, `incr` and `decr` are mapped to backend-native atomic operations where the backend supports them; Redis counters use a Lua script so missing keys are not created and decrements clamp to zero like WordPress expects. Existing non-numeric counter values follow WordPress core semantics and are treated as zero. Flushes use versioned namespaces, so group/runtime invalidation does not depend on scanning or reflecting backend internals. The other Symfony-backed drivers keep best-effort semantics because PSR-6 does not expose cross-process compare-and-swap primitives.
 
 All persistent WordPress drivers require `SYMPRESS_CACHE_SECRET` or `APP_SECRET` of at least 32 bytes;
-`AUTH_KEY` is not a signing-secret fallback. Missing or short object-cache secrets disable persistence
-and report the initialization failure before using request-local cache. Redis and Memcached retain
+`AUTH_KEY` is not a signing-secret fallback. Missing or short object-cache secrets use request-local
+cache without repeating a warning on every request; production validation reports the missing
+requirement. Redis and Memcached retain
 native counter operations; APCu, filesystem and SQLite/PDO authenticate serialized values with the
 same signed codec before reconstructing objects. Treat persistent cache backends and the kernel
 cache directory as trusted infrastructure; do not expose them to untrusted writers.
 
-WordPress cache prefixes include a hash of the project root and environment, including when
-`SYMPRESS_CACHE_PREFIX` is set. Roots resolve from `SYMPRESS_PROJECT_DIR`, `APP_PROJECT_DIR`,
-`ABSPATH`, `WP_CONTENT_DIR`, then the working directory. Set a stable project root before loading
-the drop-in in custom layouts. Environment resolves from `APP_ENV`, `APP_RUNTIME_ENV`,
+WordPress cache prefixes include a hash of the project identity and environment, including when
+`SYMPRESS_CACHE_PREFIX` is set. Identity resolves from the literal `SYMPRESS_PROJECT_DIR`, then
+`APP_PROJECT_DIR`, `ABSPATH`, `WP_CONTENT_DIR`, then the working directory. Set `SYMPRESS_PROJECT_DIR`
+to a persistent deployment base or project identifier before the kernel/drop-in boots and retain it
+across release directories. Symfony's default `framework.cache.prefix_seed` uses the same identity,
+falling back to `kernel.project_dir` when it is absent. Package/configuration discovery and the
+kernel's actual project directory still use the active release. Environment resolves from `APP_ENV`, `APP_RUNTIME_ENV`,
 `WP_ENVIRONMENT_TYPE`, then `production`. The signing key is also bound to this scoped prefix.
 This changes the cache identity on upgrade; existing cache records remain unused and refill normally.
 
@@ -191,7 +197,11 @@ validate the HMAC before deserializing. The codec permits only `stdClass`,
 `WP_Post`, `WP_Term`, `WP_Comment`, `WP_User`, `WP_Error`, `WP_Site`, `WP_Network`, `DateTime`,
 `DateTimeImmutable`, and `DateTimeZone`. Unsupported objects (including nested
 objects) are rejected rather than invoking application magic methods. Custom
-application cache objects need a reviewed codec extension or plain data arrays.
+application cache objects can be admitted with `SYMPRESS_CACHE_ALLOWED_CLASSES`, a comma-separated
+list of exact class names such as `WC_Product,Vendor\\Plugin\\CacheValue`. Wildcards and permissive
+boolean values are rejected. Additional classes apply only to authenticated signed payloads;
+review their deserialization/magic methods before adding them. Classes may load later during
+WordPress/plugin bootstrap. Prefer plain data arrays when object restoration is unnecessary.
 
 Filesystem and default SQLite cache paths use a private per-user temporary directory with a
 separate project/environment namespace and mode 0700. APCu still requires trusted PHP-FPM pools:

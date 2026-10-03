@@ -24,11 +24,30 @@ final class CacheConfigFactoryTest extends TestCase
                 'AUTH_KEY',
                 'APP_PROJECT_DIR',
                 'APP_ENV',
+                'SYMPRESS_PROJECT_DIR',
+                'SYMPRESS_CACHE_ALLOWED_CLASSES',
             ] as $name
         ) {
             putenv($name);
             unset($_ENV[$name], $_SERVER[$name]);
         }
+    }
+
+    public function testExplicitStableIdentitySurvivesReleaseChangesAndDoesNotResolveSymlinks(): void
+    {
+        $_ENV['SYMPRESS_PROJECT_DIR'] = '/deploy/site/current';
+        $_ENV['APP_PROJECT_DIR'] = '/deploy/site/releases/one';
+        $first = (new CacheConfigFactory())->create()->prefix;
+        $_ENV['APP_PROJECT_DIR'] = '/deploy/site/releases/two';
+        self::assertSame($first, (new CacheConfigFactory())->create()->prefix);
+        $_ENV['SYMPRESS_PROJECT_DIR'] = '/deploy/another/current';
+        self::assertNotSame($first, (new CacheConfigFactory())->create()->prefix);
+    }
+
+    public function testExplicitClassAllowlistRejectsWildcardsAndAcceptsUnloadedApplicationNames(): void
+    {
+        $_ENV['SYMPRESS_CACHE_ALLOWED_CLASSES'] = 'WC_Product,Vendor\\Plugin\\CacheData,*,true';
+        self::assertSame(['WC_Product', 'Vendor\\Plugin\\CacheData'], (new CacheConfigFactory())->create()->allowedClasses);
     }
 
     public function testNamespaceSeparatesProjectsAndEnvironmentsEvenWithExplicitPrefix(): void

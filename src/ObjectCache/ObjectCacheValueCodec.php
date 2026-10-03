@@ -9,8 +9,10 @@ final class ObjectCacheValueCodec
     private const string LEGACY_SERIALIZED_PREFIX = 'sympress-cache-v1:';
     private const string SIGNED_SERIALIZED_PREFIX = 'sympress-cache-v2:';
 
+    /** @param list<string> $allowedClasses */
     public function __construct(
         private readonly ?string $secret = null,
+        private readonly array $allowedClasses = [],
     ) {
     }
 
@@ -93,9 +95,12 @@ final class ObjectCacheValueCodec
 
     private function unserializePayload(string $payload): mixed
     {
-        // Only inert core cache data objects may be reconstructed. Application classes
-        // must opt into a separate codec rather than executing arbitrary magic methods.
+        // Additional application classes require explicit trusted configuration and
+        // a valid signed payload. Unsigned legacy payloads keep the core allowlist.
         $allowed = ['stdClass', 'WP_Post', 'WP_Term', 'WP_Comment', 'WP_User', 'WP_Error', 'WP_Site', 'WP_Network', 'DateTime', 'DateTimeImmutable', 'DateTimeZone'];
+        if ($this->normalizedSecret() !== null) {
+            $allowed = array_values(array_unique([...$allowed, ...$this->allowedClasses]));
+        }
         try {
             $value = @unserialize($payload, ['allowed_classes' => $allowed]);
         } catch (\Throwable) {

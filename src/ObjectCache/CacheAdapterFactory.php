@@ -17,6 +17,9 @@ final class CacheAdapterFactory
 {
     public function createPersistent(CacheConfig $config): ObjectCacheBackendInterface
     {
+        if (in_array($config->driver, ['apcu', 'filesystem', 'redis', 'memcached', 'pdo', 'sqlite'], true) && (!is_string($config->secret) || strlen($config->secret) < 32)) {
+            return $this->createRuntime();
+        }
         try {
             return $this->createAdapter($config);
         } catch (\Throwable $exception) {
@@ -215,7 +218,7 @@ final class CacheAdapterFactory
             ? hash_hmac('sha256', 'sympress.object-cache:' . $config->prefix, $config->secret)
             : null;
 
-        return new ObjectCacheValueCodec($secret);
+        return new ObjectCacheValueCodec($secret, $config->allowedClasses);
     }
 
     private function assertRedisConnection(object $connection): void

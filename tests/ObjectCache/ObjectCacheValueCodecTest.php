@@ -56,6 +56,22 @@ final class ObjectCacheValueCodecTest extends TestCase
         self::assertInstanceOf(\DateTimeImmutable::class, $decoded);
         self::assertSame('2026-10-02', $decoded->modify('+1 day')->format('Y-m-d'));
     }
+
+    public function testConfiguredPluginClassesRequireAuthenticationBeforeTheirMagicMethodsRun(): void
+    {
+        CacheWakeupProbe::$woken = 0;
+        $codec = new ObjectCacheValueCodec('secret', [CacheWakeupProbe::class]);
+        $payload = $codec->encode(new CacheWakeupProbe());
+        self::assertInstanceOf(CacheWakeupProbe::class, $codec->decode($payload));
+        self::assertSame(1, CacheWakeupProbe::$woken);
+        $tampered = str_replace('sympress-cache-v2:', 'sympress-cache-v2:bad', $payload);
+        self::assertFalse($codec->decode($tampered));
+        self::assertSame(1, CacheWakeupProbe::$woken);
+        $unsigned = new ObjectCacheValueCodec(null, [CacheWakeupProbe::class]);
+        self::assertFalse($unsigned->decode($unsigned->encode(new CacheWakeupProbe())));
+        self::assertSame(1, CacheWakeupProbe::$woken);
+        CacheWakeupProbe::$woken = 0;
+    }
 }
 
 final class CacheWakeupProbe

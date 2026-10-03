@@ -34,6 +34,7 @@ final class SymPressFrameworkExtension extends FrameworkExtension
         }
 
         parent::load($configs, $container);
+        $container->setParameter('framework.cache.secret', $container->hasParameter('kernel.secret') ? $container->getParameter('kernel.secret') : '%env(default::APP_SECRET)%');
 
         $this->removeUnavailableAutoconfiguration($container);
         $this->removeSymfonyKernelConsoleCommands($container);

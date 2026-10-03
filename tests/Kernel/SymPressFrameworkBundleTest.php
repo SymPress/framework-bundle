@@ -10,6 +10,7 @@ use SymPress\Kernel\Bundle\BundleMetadata;
 use SymPress\Kernel\Bundle\BundleRegistry;
 use SymPress\Kernel\Kernel\AbstractKernel;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 
 final class SymPressFrameworkBundleTest extends TestCase
 {
@@ -54,6 +55,38 @@ final class SymPressFrameworkBundleTest extends TestCase
         self::assertTrue($container->has('request_stack'));
         self::assertTrue($container->has('http_kernel'));
         self::assertTrue($container->has('cache.app'));
+    }
+
+    public function testMissingAndShortSecretsUseRequestCacheOnExistingKernelAndStrongValuesPersist(): void
+    {
+        foreach (['missing', 'short', 'strong'] as $mode) {
+            $directory = $this->cacheDir . '/' . $mode;
+            $run = new Process([PHP_BINARY, '-d', 'apc.enable_cli=1', dirname(__DIR__) . '/Fixtures/cache-secret-upgrade.php', $directory, $mode]);
+            $run->mustRun();
+            $first = json_decode($run->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+            self::assertSame(['cache.app' => false, 'cache.files' => false, 'cache.sqlite' => false, 'cache.apcu' => false], $first['hits']);
+            self::assertTrue($first['system']);
+            $run->mustRun();
+            $second = json_decode($run->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+            foreach (['cache.app', 'cache.files', 'cache.sqlite'] as $pool) {
+                self::assertSame($mode === 'strong', $second['hits'][$pool], $mode . '/' . $pool);
+            }
+            if ($mode !== 'strong') {
+                self::assertDirectoryDoesNotExist($directory . '/pools/app');
+                self::assertFileDoesNotExist($directory . '/payload.sqlite');
+            }
+        }
+    }
+
+    public function testUnsignedExistingApplicationCacheEntriesAreRejectedBeforeRestoration(): void
+    {
+        $run = new Process([PHP_BINARY, '-d', 'apc.enable_cli=1', dirname(__DIR__) . '/Fixtures/cache-secret-upgrade.php', $this->cacheDir, 'strong']);
+        $run->mustRun();
+        $run = new Process([PHP_BINARY, '-d', 'apc.enable_cli=1', dirname(__DIR__) . '/Fixtures/cache-secret-upgrade.php', $this->cacheDir, 'strong', 'poison']);
+        $run->mustRun();
+        $result = json_decode($run->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(['cache.app' => false, 'cache.files' => false, 'cache.sqlite' => false, 'cache.apcu' => false], $result['hits']);
+        self::assertTrue($result['apcu_tamper_miss']);
     }
 
     private function kernel(string $projectDir): AbstractKernel

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SymPress\Framework;
 
 use SymPress\Framework\Cache\FrameworkCacheConfigurationPass;
+use SymPress\Framework\Cache\GuardApplicationCachePoolsPass;
 use SymPress\Framework\Cache\RemoveAbstractResetTagsPass;
 use SymPress\Framework\DependencyInjection\Compiler\RegisterFallbackRouterPass;
 use SymPress\Kernel\Bundle\AbstractBundle;
@@ -20,6 +21,7 @@ final class SymPressFrameworkBundle extends AbstractBundle
     public function build(ContainerBuilder $container): void
     {
         parent::build($container);
+        $container->addCompilerPass(new GuardApplicationCachePoolsPass(), PassConfig::TYPE_BEFORE_REMOVING, 100);
 
         if (class_exists(SymfonyFrameworkBundle::class)) {
             (new SymfonyFrameworkBundle())->build($container);

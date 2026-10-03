@@ -82,10 +82,21 @@ final class FrameworkCacheConfigurationPass implements CompilerPassInterface
             }
 
             $pools[$name] = $this->normalizePool($pool);
+            // App values use authenticated data stores; PHP bytecode caches remain a system-only surface.
+            foreach ($pools[$name]['adapters'] as $provider => $adapter) {
+                if (in_array($adapter, ['cache.adapter.php_files', 'cache.adapter.system', 'cache.system'], true)) {
+                    $pools[$name]['adapters'][$provider] = 'cache.adapter.filesystem';
+                }
+            }
+            if (isset($pools[$name]['marshaller']) && $pools[$name]['marshaller'] !== 'cache.default_marshaller') {
+                $marshaller = '.sympress.signed_marshaller.' . $name;
+                $container->register($marshaller, SignedMarshaller::class)->setArguments(['%framework.cache.secret%', '%cache.prefix.seed%', new Reference($pools[$name]['marshaller'])]);
+                $pools[$name]['marshaller'] = $marshaller;
+            }
         }
 
         $pools['cache.app'] = $this->normalizePool([
-            'adapters' => [$config['app']],
+            'adapters' => [in_array($config['app'], ['cache.adapter.php_files', 'cache.adapter.system', 'cache.system'], true) ? 'cache.adapter.filesystem' : $config['app']],
             'public' => true,
             'tags' => false,
             'clearer' => 'cache.app_clearer',

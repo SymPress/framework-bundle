@@ -8,7 +8,8 @@ where applicable.
 
 ## Unreleased
 
-- Keep upgrades with an existing short APP_SECRET available while disabling persistent object caching until a strong signing secret is provided; report the production requirement through validation without per-request warning noise.
+- Keep upgrades with missing or short APP_SECRET available on existing kernels: WordPress object caches and Symfony application pools use request memory until a strong signing secret is provided; report the production requirement through validation without per-request warning noise.
+- Authenticate Symfony application pool payloads before deserialization across persistent adapters and configured marshallers; preserve trusted Symfony system/compiled-code caches and discard unsigned legacy entries as misses.
 - Use a stable literal SYMPRESS_PROJECT_DIR for WordPress signing/namespaces and Symfony cache pool seeds while retaining active-release package, configuration and autoloader discovery.
 - Allow explicitly reviewed plugin/WooCommerce object classes only after signed payload authentication.
 

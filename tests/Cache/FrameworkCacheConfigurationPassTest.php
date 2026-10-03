@@ -6,6 +6,7 @@ namespace SymPress\Framework\Tests\Cache;
 
 use PHPUnit\Framework\TestCase;
 use SymPress\Framework\Cache\FrameworkCacheConfigurationPass;
+use SymPress\Framework\Cache\SignedMarshaller;
 use Symfony\Component\Cache\Adapter\ChainAdapter;
 use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
@@ -60,6 +61,30 @@ final class FrameworkCacheConfigurationPassTest extends TestCase
         self::assertTrue($container->hasDefinition('cache.system'));
         self::assertTrue($container->hasDefinition('cache.marketing'));
         self::assertTrue($container->getDefinition('cache.marketing')->isPublic());
+    }
+
+    public function testApplicationPhpPoolsUseAuthenticatedStorageAndWrapCustomMarshallers(): void
+    {
+        $container = $this->container();
+        $container->setParameter('framework.cache', [
+            'app' => 'cache.adapter.php_files',
+            'pools' => [
+                'cache.custom' => ['adapter' => 'cache.adapter.system', 'marshaller' => 'custom.marshaller'],
+            ],
+        ]);
+        (new FrameworkCacheConfigurationPass())->process($container);
+
+        foreach (['cache.app', 'cache.custom'] as $name) {
+            $pool = $container->getDefinition($name);
+            self::assertInstanceOf(ChildDefinition::class, $pool);
+            self::assertSame('cache.adapter.filesystem', $pool->getParent());
+        }
+        $marshaller = $container->getDefinition('cache.custom')->getTag('cache.pool')[0]['marshaller'];
+        self::assertSame(SignedMarshaller::class, $container->getDefinition($marshaller)->getClass());
+        self::assertSame('custom.marshaller', (string) $container->getDefinition($marshaller)->getArgument(2));
+        $system = $container->getDefinition('cache.system');
+        self::assertInstanceOf(ChildDefinition::class, $system);
+        self::assertSame('cache.adapter.system', $system->getParent());
     }
 
     public function testRegistersFrameworkBundleCachePools(): void

@@ -11,6 +11,7 @@ use SymPress\Framework\Admin\CacheToolbarMenu;
 use SymPress\Framework\Cache\CachePoolClearer;
 use SymPress\Framework\Cache\CachePoolPruner;
 use SymPress\Framework\Cache\CachePoolRegistry;
+use SymPress\Framework\Cache\SignedMarshaller;
 use SymPress\Framework\Cache\Command\CachePoolClearCommand;
 use SymPress\Framework\Cache\Command\CachePoolDeleteCommand;
 use SymPress\Framework\Cache\Command\CachePoolInvalidateTagsCommand;
@@ -59,6 +60,7 @@ return static function (ContainerConfigurator $container): void {
     $parameters->set('cache.prefix.seed', 'sympress.%env(default:kernel.project_dir:SYMPRESS_PROJECT_DIR)%.%kernel.environment%');
     $parameters->set('framework.cache.version', '%kernel.environment%');
     $parameters->set('framework.cache', []);
+    $parameters->set('framework.cache.secret', '%env(default::APP_SECRET)%');
 
     $services = $container->services();
     $services->defaults()
@@ -267,8 +269,8 @@ return static function (ContainerConfigurator $container): void {
         ])
         ->tag('monolog.logger', ['channel' => 'cache']);
 
-    $services->set('cache.default_marshaller', DefaultMarshaller::class)
-        ->args([null, '%kernel.debug%']);
+    $services->set('cache.default_marshaller', SignedMarshaller::class)
+        ->args(['%framework.cache.secret%', '%cache.prefix.seed%', inline_service(DefaultMarshaller::class)->args([null, '%kernel.debug%'])]);
 
     $services->set('cache.early_expiration_handler', EarlyExpirationHandler::class)
         ->args([service('reverse_container')])

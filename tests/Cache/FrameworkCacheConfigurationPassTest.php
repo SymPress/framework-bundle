@@ -17,6 +17,28 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 
 final class FrameworkCacheConfigurationPassTest extends TestCase
 {
+    public function testStableProjectIdentityKeepsSymfonyPoolPrefixAcrossReleases(): void
+    {
+        $previous = $_ENV['SYMPRESS_PROJECT_DIR'] ?? null;
+        $_ENV['SYMPRESS_PROJECT_DIR'] = '/deploy/stable-site';
+        try {
+            foreach (['/deploy/stable-site/releases/one', '/deploy/stable-site/releases/two'] as $release) {
+                $container = $this->container();
+                $container->setParameter('kernel.project_dir', $release);
+                (new FrameworkCacheConfigurationPass())->process($container);
+                self::assertSame('sympress./deploy/stable-site.test', $container->getParameter('cache.prefix.seed'));
+                self::assertSame($release, $container->getParameter('kernel.project_dir'));
+            }
+        } finally {
+            if ($previous === null) {
+                unset($_ENV['SYMPRESS_PROJECT_DIR']);
+            }
+            if ($previous !== null) {
+                $_ENV['SYMPRESS_PROJECT_DIR'] = $previous;
+            }
+        }
+    }
+
     public function testRegistersDefaultAndCustomCachePools(): void
     {
         $container = $this->container();

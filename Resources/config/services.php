@@ -56,7 +56,7 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 return static function (ContainerConfigurator $container): void {
     $parameters = $container->parameters();
-    $parameters->set('cache.prefix.seed', 'sympress.%kernel.project_dir%.%kernel.environment%');
+    $parameters->set('cache.prefix.seed', 'sympress.%env(default:kernel.project_dir:SYMPRESS_PROJECT_DIR)%.%kernel.environment%');
     $parameters->set('framework.cache.version', '%kernel.environment%');
     $parameters->set('framework.cache', []);
 

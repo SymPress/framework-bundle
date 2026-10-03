@@ -35,7 +35,7 @@ final class FrameworkCacheConfigurationPass implements CompilerPassInterface
      * @var array<string, mixed>
      */
     private const array DEFAULTS = [
-        'prefix_seed' => 'sympress.%kernel.project_dir%.%kernel.environment%',
+        'prefix_seed' => 'sympress.%env(default:kernel.project_dir:SYMPRESS_PROJECT_DIR)%.%kernel.environment%',
         'app' => 'cache.adapter.filesystem',
         'system' => 'cache.adapter.system',
         'directory' => '%kernel.cache_dir%/pools/app',

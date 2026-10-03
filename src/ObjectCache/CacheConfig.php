@@ -8,6 +8,7 @@ final class CacheConfig
 {
     /**
      * @param array<string, mixed> $driverArgs
+     * @param list<string> $allowedClasses
      */
     public function __construct(
         public readonly string $driver,
@@ -17,6 +18,7 @@ final class CacheConfig
         public readonly int $purgeInterval,
         public readonly string $prefix,
         public readonly ?string $secret = null,
+        public readonly array $allowedClasses = [],
     ) {
     }
 }

@@ -155,6 +155,9 @@ PHP,
             }
 
             mkdir($projectDir . '/packages');
+            $identity = $projectDir . '/stable-identity';
+            mkdir($identity . '/vendor', 0700, true);
+            file_put_contents($identity . '/vendor/autoload.php', '<?php throw new RuntimeException("Stale deployment autoloader was selected");');
 
             self::assertTrue(
                 copy(dirname(__DIR__, 2) . '/dropin/object-cache.php', $contentDir . '/object-cache.php'),
@@ -163,6 +166,7 @@ PHP,
             $code = sprintf(
                 <<<'PHP'
 define('WP_CONTENT_DIR', %s);
+define('SYMPRESS_PROJECT_DIR', %s);
 define('SYMPRESS_CACHE_DRIVER', 'array');
 require %s;
 if (!function_exists('wp_cache_init')) {
@@ -172,6 +176,7 @@ wp_cache_init();
 exit(isset($GLOBALS['wp_object_cache']) ? 0 : 2);
 PHP,
                 var_export($contentDir, true),
+                var_export($identity, true),
                 var_export($contentDir . '/object-cache.php', true),
             );
 

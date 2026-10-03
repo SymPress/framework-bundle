@@ -47,7 +47,6 @@ declare(strict_types=1);
         $projectDirs[] = $dir;
     };
 
-    $addProjectDir($path($value('SYMPRESS_PROJECT_DIR')));
     $addProjectDir($path($value('APP_PROJECT_DIR')));
 
     $contentDir = defined('WP_CONTENT_DIR') ? $path(constant('WP_CONTENT_DIR')) : $path(__DIR__);
@@ -79,6 +78,8 @@ declare(strict_types=1);
         $scanDir = $parent;
     }
 
+    // Stable cache identity must not select a stale deployment-base autoloader.
+    $addProjectDir($path($value('SYMPRESS_PROJECT_DIR')));
     $projectDirs = array_values(array_unique($projectDirs));
     $autoload = $file($path($value('SYMPRESS_COMPOSER_AUTOLOAD')));
 

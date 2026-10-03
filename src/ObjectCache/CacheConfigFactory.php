@@ -24,17 +24,32 @@ final class CacheConfigFactory
             $this->scopedPrefix(),
             $this->stringValue('SYMPRESS_CACHE_SECRET')
                 ?? $this->stringValue('APP_SECRET'),
+            $this->allowedClasses(),
         );
+    }
+
+    /** @return list<string> */
+    private function allowedClasses(): array
+    {
+        $configured = $this->stringValue('SYMPRESS_CACHE_ALLOWED_CLASSES');
+        $classes = [];
+        foreach ($configured === null ? [] : explode(',', $configured) as $class) {
+            $class = ltrim(trim($class), '\\');
+            if ($class !== '' && !in_array(strtolower($class), ['true', 'false', 'null', 'self', 'static', 'parent'], true) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*$/D', $class)) {
+                $classes[] = $class;
+            }
+        }
+        return array_values(array_unique($classes));
     }
 
     private function scopedPrefix(): string
     {
-        $project = $this->stringValue('SYMPRESS_PROJECT_DIR')
-            ?? $this->stringValue('APP_PROJECT_DIR')
-            ?? $this->stringValue('ABSPATH')
+        $identity = $this->stringValue('SYMPRESS_PROJECT_DIR')
+            ?? $this->stringValue('APP_PROJECT_DIR');
+        $project = $identity ?? $this->stringValue('ABSPATH')
             ?? $this->stringValue('WP_CONTENT_DIR')
             ?? (getcwd() ?: __DIR__);
-        $project = realpath($project) ?: $project;
+        $project = $identity === null ? (realpath($project) ?: $project) : rtrim($project, '/\\');
         $environment = $this->stringValue('APP_ENV')
             ?? $this->stringValue('APP_RUNTIME_ENV')
             ?? $this->stringValue('WP_ENVIRONMENT_TYPE')

@@ -5,12 +5,30 @@ declare(strict_types=1);
 namespace SymPress\Framework\Console\Command;
 
 use SymPress\Kernel\Container;
+use SymPress\Kernel\Kernel\KernelInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass;
 
 trait DebugContainerBuilderTrait
 {
     protected function debugContainerBuilder(Container $container): ContainerBuilder
     {
+        if ($container->runtimeContainer() !== null) {
+            $kernel = $container->get(Container::KERNEL_ID);
+            if ($kernel instanceof KernelInterface) {
+                // Serialized debug snapshots have already undergone optimization.
+                // Re-running extension/compiler passes on them can dereference
+                // services removed by the original compilation (e.g. Twig's iterator).
+                $fresh = $kernel->createContainer();
+                $kernel->configureContainer($fresh->builder(), $fresh, $kernel->discoverBundles());
+                $fresh->builder()->getCompilerPassConfig()->setMergePass(
+                    new MergeExtensionConfigurationPass(array_keys($fresh->builder()->getExtensions())),
+                );
+
+                return $fresh->builder();
+            }
+        }
+
         $dumpFile = $this->debugDumpFile($container);
 
         if ($dumpFile !== null) {

@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
-## Unreleased
+## 1.0.5 — 2026-10-05
+
+- Reconstruct complete configuration for lint/debug commands when the kernel reuses a compiled container. Avoid compiling a partial warm facade that lacks Twig services; retain the running runtime container.
+- Verify complete Demo deployment against real SSH, MariaDB and FPM after an immutable warm-cache hit.
+
+## 1.0.4 — 2026-10-03
 
 - Keep upgrades with missing or short APP_SECRET available on existing kernels: WordPress object caches and Symfony application pools use request memory until a strong signing secret is provided; report the production requirement through validation without per-request warning noise.
 - Authenticate Symfony application pool payloads before deserialization across persistent adapters and configured marshallers; preserve trusted Symfony system/compiled-code caches and discard unsigned legacy entries as misses.

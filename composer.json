@@ -18,15 +18,15 @@
         "symfony/cache-contracts": "^3.6",
         "symfony/config": "^8.1",
         "symfony/console": "^8.1",
-        "symfony/dependency-injection": "^8.1",
+        "symfony/dependency-injection": "^8.1.8",
         "symfony/error-handler": "^8.1",
         "symfony/expression-language": "^8.0",
         "symfony/filesystem": "^8.0",
         "symfony/framework-bundle": "^8.1",
         "symfony/http-kernel": "^8.1",
-        "symfony/routing": "^8.0",
+        "symfony/routing": "^8.1",
         "symfony/service-contracts": "^3.6",
-        "symfony/yaml": "^8.0",
+        "symfony/yaml": "^8.1",
         "sympress/kernel": "^1.1.1"
     },
     "require-dev": {

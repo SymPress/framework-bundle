@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.6 — 2026-10-09
+
+- Require maintained Symfony Routing and YAML 8.1 or newer, excluding the vulnerable 8.0 releases covered by the May 2026 advisories.
+- Require Symfony DependencyInjection 8.1.8 or newer to preserve reused environment placeholders during extension configuration and container dumping.
+
 ## 1.0.5 — 2026-10-05
 
 - Reconstruct complete configuration for lint/debug commands when the kernel reuses a compiled container. Avoid compiling a partial warm facade that lacks Twig services; retain the running runtime container.

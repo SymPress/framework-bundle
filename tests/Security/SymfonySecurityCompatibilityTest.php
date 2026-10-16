@@ -31,6 +31,7 @@ final class SymfonySecurityCompatibilityTest extends TestCase
         yield 'expression last affected patch' => ['symfony/expression-language', '8.1.8', '8.1.9'];
         yield 'yaml inline lexer' => ['symfony/yaml', '8.1.5', '8.1.6'];
         yield 'kernel header parser floor' => ['sympress/kernel', '1.1.9', '1.1.10'];
+        yield 'native development cache warmer' => ['symfony/framework-bundle', '8.1.7', '8.1.8'];
     }
 
     #[DataProvider('deepExpressions')]

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.7 — 2026-10-16
+
+- Require Symfony ExpressionLanguage 8.1.9 and YAML 8.1.6 or newer to exclude CVE-2026-109449 and CVE-2026-109413.
+- Require SymPress Kernel 1.1.10 or newer to retain the corrected HttpFoundation 8.1.9 minimum in lowest-version installations.
+- Verify dependency version boundaries and rejection of excessively nested expressions and inline YAML collections.
+
 ## 1.0.6 — 2026-10-09
 
 - Require maintained Symfony Routing and YAML 8.1 or newer, excluding the vulnerable 8.0 releases covered by the May 2026 advisories.

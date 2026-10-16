@@ -20,17 +20,18 @@
         "symfony/console": "^8.1",
         "symfony/dependency-injection": "^8.1.8",
         "symfony/error-handler": "^8.1",
-        "symfony/expression-language": "^8.0",
+        "symfony/expression-language": "^8.1.9",
         "symfony/filesystem": "^8.0",
         "symfony/framework-bundle": "^8.1",
         "symfony/http-kernel": "^8.1",
         "symfony/routing": "^8.1",
         "symfony/service-contracts": "^3.6",
-        "symfony/yaml": "^8.1",
-        "sympress/kernel": "^1.1.1"
+        "symfony/yaml": "^8.1.6",
+        "sympress/kernel": "^1.1.10"
     },
     "require-dev": {
         "brain/monkey": "^2.6",
+        "composer/semver": "^3.4",
         "sympress/qa": "^0.1.2"
     },
     "suggest": {

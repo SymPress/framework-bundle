@@ -22,7 +22,7 @@
         "symfony/error-handler": "^8.1",
         "symfony/expression-language": "^8.1.9",
         "symfony/filesystem": "^8.0",
-        "symfony/framework-bundle": "^8.1",
+        "symfony/framework-bundle": "^8.1.8",
         "symfony/http-kernel": "^8.1",
         "symfony/routing": "^8.1",
         "symfony/service-contracts": "^3.6",

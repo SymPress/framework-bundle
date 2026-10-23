@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.8 — 2026-10-23
+
+- Rebuild container diagnostics on a cloned kernel so lint/debug commands preserve active containers, booted bundles and final shutdown cleanup.
+- Add a regression that verifies live container and bundle identity and successful shutdown after diagnostics.
+
 ## 1.0.7 — 2026-10-16
 
 - Require Symfony ExpressionLanguage 8.1.9 and YAML 8.1.6 or newer to exclude CVE-2026-109449 and CVE-2026-109413.

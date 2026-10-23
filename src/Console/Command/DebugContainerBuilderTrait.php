@@ -19,6 +19,7 @@ trait DebugContainerBuilderTrait
                 // Serialized debug snapshots have already undergone optimization.
                 // Re-running extension/compiler passes on them can dereference
                 // services removed by the original compilation (e.g. Twig's iterator).
+                $kernel = clone $kernel;
                 $fresh = $kernel->createContainer();
                 $kernel->configureContainer($fresh->builder(), $fresh, $kernel->discoverBundles());
                 $fresh->builder()->getCompilerPassConfig()->setMergePass(

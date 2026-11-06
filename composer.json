@@ -27,7 +27,7 @@
         "symfony/routing": "^8.1.11",
         "symfony/service-contracts": "^3.6",
         "symfony/yaml": "^8.1.11",
-        "sympress/kernel": "^1.1.10"
+        "sympress/kernel": "^1.1.14"
     },
     "require-dev": {
         "brain/monkey": "^2.6",

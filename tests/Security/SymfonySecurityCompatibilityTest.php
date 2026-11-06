@@ -30,7 +30,7 @@ final class SymfonySecurityCompatibilityTest extends TestCase
         yield 'expression initial incomplete fix' => ['symfony/expression-language', '8.1.6', '8.1.9'];
         yield 'expression last affected patch' => ['symfony/expression-language', '8.1.8', '8.1.9'];
         yield 'yaml inline lexer' => ['symfony/yaml', '8.1.10', '8.1.11'];
-        yield 'kernel header parser floor' => ['sympress/kernel', '1.1.9', '1.1.10'];
+        yield 'kernel security boundary' => ['sympress/kernel', '1.1.13', '1.1.14'];
         yield 'framework-bundle trusted proxy boundary' => ['symfony/framework-bundle', '8.1.10', '8.1.11'];
     }
 

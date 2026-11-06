@@ -8,7 +8,7 @@ where applicable.
 
 ## 1.0.9 — 2026-11-06
 
-- Use the Symfony 8.1.11 security patches released on November 4.
+- Use the Symfony 8.1.11 security patches and require Kernel 1.1.14 for its HttpFoundation security floor.
 
 ## 1.0.8 — 2026-10-23
 

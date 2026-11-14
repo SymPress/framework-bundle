@@ -32,6 +32,7 @@
     "require-dev": {
         "brain/monkey": "^2.6",
         "composer/semver": "^3.4",
+        "symfony/stopwatch": "^8.1",
         "sympress/qa": "^0.1.2"
     },
     "suggest": {

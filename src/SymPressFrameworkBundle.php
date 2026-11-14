@@ -12,6 +12,7 @@ use SymPress\Kernel\Bundle\AbstractBundle;
 use Symfony\Component\Cache\DependencyInjection\CachePoolClearerPass;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPrunerPass;
+use Symfony\Component\Console\ConsoleBundle;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle as SymfonyFrameworkBundle;
@@ -25,6 +26,10 @@ final class SymPressFrameworkBundle extends AbstractBundle
 
         if (class_exists(SymfonyFrameworkBundle::class)) {
             (new SymfonyFrameworkBundle())->build($container);
+            // FrameworkBundle requires ConsoleBundle (#[RequiredBundle]); its debug services decorate console services.
+            $console = new ConsoleBundle();
+            $console->build($container);
+            $container->registerExtension($console->getContainerExtension());
             $container->addCompilerPass(
                 new FrameworkCacheConfigurationPass(),
                 PassConfig::TYPE_BEFORE_OPTIMIZATION,

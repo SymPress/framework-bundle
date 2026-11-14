@@ -57,6 +57,27 @@ final class SymPressFrameworkBundleTest extends TestCase
         self::assertTrue($container->has('cache.app'));
     }
 
+    public function testCompilesDebugContainerWithConsoleArgumentResolver(): void
+    {
+        $projectDir = dirname(__DIR__, 2);
+        $kernel = $this->kernel($projectDir, true);
+        $container = $kernel->createContainer();
+        $registry = (new BundleRegistry())->add(new BundleMetadata(
+            'sympress/framework-bundle',
+            'library',
+            'framework-bundle',
+            $projectDir,
+            $projectDir . '/composer.json',
+            new SymPressFrameworkBundle(),
+        ));
+
+        $loaded = $kernel->configureContainer($container->builder(), $container, $registry);
+        // Debug mode decorates console.argument_resolver, which only the Console bundle provides.
+        $kernel->createRuntimeContainer($container, $registry, $loaded);
+
+        self::assertTrue($container->has('http_kernel'));
+    }
+
     public function testMissingAndShortSecretsUseRequestCacheOnExistingKernelAndStrongValuesPersist(): void
     {
         foreach (['missing', 'short', 'strong'] as $mode) {
@@ -89,9 +110,9 @@ final class SymPressFrameworkBundleTest extends TestCase
         self::assertTrue($result['apcu_tamper_miss']);
     }
 
-    private function kernel(string $projectDir): AbstractKernel
+    private function kernel(string $projectDir, bool $debug = false): AbstractKernel
     {
-        return new class ($projectDir, 'test', false, $this->cacheDir) extends AbstractKernel {
+        return new class ($projectDir, 'test', $debug, $this->cacheDir) extends AbstractKernel {
             public function __construct(
                 string $projectDir,
                 string $environment,

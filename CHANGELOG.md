@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.10 — 2026-11-14
+
+- Register Symfony's ConsoleBundle with FrameworkBundle so debug containers (`WP_DEBUG`) compile when `symfony/stopwatch` is installed; previously `debug.console.argument_resolver` failed on the missing `console.argument_resolver` service.
+- Verify debug-mode container compilation in the kernel test suite.
+
 ## 1.0.9 — 2026-11-06
 
 - Use the Symfony 8.1.11 security patches and require Kernel 1.1.14 for its HttpFoundation security floor.

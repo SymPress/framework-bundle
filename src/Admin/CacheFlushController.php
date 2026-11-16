@@ -10,7 +10,7 @@ final class CacheFlushController
 
     public function flush(): void
     {
-        if (function_exists('current_user_can') && !current_user_can('manage_options')) {
+        if (function_exists('current_user_can') && !self::currentUserCanFlush()) {
             $this->forbidden();
         }
 
@@ -35,6 +35,17 @@ final class CacheFlushController
             wp_safe_redirect(wp_get_referer() ?: $this->fallbackUrl());
             exit;
         }
+    }
+
+    public static function currentUserCanFlush(): bool
+    {
+        if (!function_exists('current_user_can') || !current_user_can('manage_options')) {
+            return false;
+        }
+
+        // On multisite the persistent cache is shared by every site in the network.
+        return !function_exists('is_multisite') || !is_multisite()
+            || (function_exists('is_super_admin') && is_super_admin());
     }
 
     private function forbidden(): void

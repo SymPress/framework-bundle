@@ -38,6 +38,29 @@ final class DropInInstallerTest extends TestCase
         }
     }
 
+    public function testInstalledDropInIsWorldReadable(): void
+    {
+        $contentDir = sys_get_temp_dir() . '/sympress-framework-test-' . bin2hex(random_bytes(4));
+        mkdir($contentDir);
+        $umask = umask(0022);
+
+        try {
+            self::assertTrue((new DropInInstaller(dirname(__DIR__, 2), $contentDir))->install());
+            clearstatcache(true, $contentDir . '/object-cache.php');
+
+            // PHP-FPM may run as another user than the installer and must still be able to require the drop-in.
+            self::assertSame(0644, fileperms($contentDir . '/object-cache.php') & 0777);
+        } finally {
+            umask($umask);
+
+            if (is_file($contentDir . '/object-cache.php')) {
+                unlink($contentDir . '/object-cache.php');
+            }
+
+            rmdir($contentDir);
+        }
+    }
+
     public function testDoesNotRewriteUnchangedManagedObjectCacheDropIn(): void
     {
         $contentDir = sys_get_temp_dir() . '/sympress-framework-test-' . bin2hex(random_bytes(4));

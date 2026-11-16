@@ -101,7 +101,8 @@ final class DropInInstaller
         }
 
         try {
-            if (file_put_contents($temporary, $contents, LOCK_EX) === false) {
+            // tempnam() creates 0600 files; PHP-FPM may run as another user and must be able to read the drop-in.
+            if (file_put_contents($temporary, $contents, LOCK_EX) === false || !chmod($temporary, 0644)) {
                 return false;
             }
 

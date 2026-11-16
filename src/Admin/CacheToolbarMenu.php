@@ -8,7 +8,7 @@ final class CacheToolbarMenu
 {
     public function render(object $adminBar): void
     {
-        if (!function_exists('current_user_can') || !current_user_can('manage_options')) {
+        if (!CacheFlushController::currentUserCanFlush()) {
             return;
         }
 

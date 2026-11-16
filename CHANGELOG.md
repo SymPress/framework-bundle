@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.11 — 2026-11-16
+
+- Require a super admin to flush the object cache from the admin bar on multisite; the persistent cache is shared network-wide, so sub-site admins (`manage_options`) can no longer flush it. The toolbar entry is hidden for them as well.
+- Install the fallback `object-cache.php` drop-in with mode 0644 instead of tempnam()'s 0600, so PHP-FPM can read it when the installer runs as another user.
+- Pin the reusable `sympress/workflows` CI workflows to v1.3.2.
+
 ## 1.0.10 — 2026-11-14
 
 - Register Symfony's ConsoleBundle with FrameworkBundle so debug containers (`WP_DEBUG`) compile when `symfony/stopwatch` is installed; previously `debug.console.argument_resolver` failed on the missing `console.argument_resolver` service.

@@ -203,8 +203,33 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
         }
     }
 
+    /**
+     * Flushes only switch to a new namespace version; this removes entries of superseded versions.
+     */
     public function purge(): bool
     {
+        // shortcut: phpredis/Relay SCAN signature only; Predis and cluster clients keep relying on eviction.
+        if (!method_exists($this->redis, 'scan') || $this->redis instanceof \RedisArray || str_contains($this->redis::class, 'Cluster') || str_starts_with($this->redis::class, 'Predis\\')) {
+            return true;
+        }
+
+        // Compare against the stored versions, not the ones this request cached earlier.
+        $this->versions = [];
+        $iterator = null;
+
+        try {
+            do {
+                $rawKeys = $this->scan($iterator, addcslashes($this->prefix, '\\*?[]') . ':v*');
+                $stale = is_array($rawKeys) ? array_values(array_filter($rawKeys, $this->isStale(...))) : [];
+
+                if ($stale !== []) {
+                    $this->redis->unlink($stale);
+                }
+            } while ($iterator > 0);
+        } catch (\Throwable) {
+            return false;
+        }
+
         return true;
     }
 
@@ -344,6 +369,27 @@ LUA;
             $this->version($this->groupPrefixFromKey($key)),
             $key,
         );
+    }
+
+    /**
+     * @param-out int|null $iterator
+     */
+    private function scan(?int &$iterator, string $pattern): mixed
+    {
+        return $this->redis->scan($iterator, $pattern, 1000);
+    }
+
+    private function isStale(string $rawKey): bool
+    {
+        // <prefix>:v<global>:g<group>:<key>; version keys (<prefix>:version:<hash>) do not split into three parts.
+        $parts = explode(':', substr($rawKey, strlen($this->prefix) + 2), 3);
+
+        if (count($parts) !== 3 || !str_starts_with($parts[1], 'g')) {
+            return false;
+        }
+
+        return $parts[0] !== $this->version('')
+            || substr($parts[1], 1) !== $this->version($this->groupPrefixFromKey($parts[2]));
     }
 
     private function groupPrefixFromKey(string $key): string

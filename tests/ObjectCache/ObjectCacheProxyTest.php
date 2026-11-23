@@ -182,6 +182,14 @@ final class ObjectCacheProxyTest extends TestCase
         self::assertSame('stored@example.com', $cache->get('1', 'users')->user_email);
     }
 
+    public function testGetMultipleKeepsCachedNullFromTheBackend(): void
+    {
+        $cache = $this->proxy();
+        self::assertTrue($cache->set('empty', null, 'options'));
+
+        self::assertSame(['empty' => null, 'missing' => false], $cache->get_multiple(['empty', 'missing'], 'options', true));
+    }
+
     private function proxy(): ObjectCacheProxy
     {
         return new ObjectCacheProxy(

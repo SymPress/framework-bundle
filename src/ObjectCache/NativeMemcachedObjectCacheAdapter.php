@@ -12,6 +12,13 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
     private int $cacheHits = 0;
     private int $cacheMisses = 0;
 
+    /**
+     * Namespace versions read during this request, so each key costs one round trip.
+     *
+     * @var array<string, string>
+     */
+    private array $versions = [];
+
     public function __construct(
         private readonly object $memcached,
         private readonly string $prefix,
@@ -242,36 +249,51 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
         return strlen($key) > 64 ? substr($key, 0, -64) : '';
     }
 
-    private function version(string $scope): int
+    /**
+     * Versions are random tokens, never counters: a version key lost to eviction gets a fresh
+     * token instead of restarting at a value that entries from before a flush still carry.
+     */
+    private function version(string $scope): string
     {
+        if (isset($this->versions[$scope])) {
+            return $this->versions[$scope];
+        }
+
         $key = $this->versionKey($scope);
         $version = $this->memcached->get($key);
 
-        if (is_numeric($version) && (int) $version > 0) {
-            return (int) $version;
+        if ($version === false && $this->lastResultCode() === $this->notFoundCode()) {
+            $candidate = self::newVersion();
+            $version = $this->memcached->add($key, $candidate, 0) ? $candidate : $this->memcached->get($key);
         }
 
-        $this->memcached->add($key, '1', 0);
+        // Counters written by earlier releases may come back as integers.
+        $version = is_int($version) || is_string($version) ? (string) $version : '';
 
-        return 1;
+        if ($version === '') {
+            // Unknown version: a throwaway token keeps this call from hitting entries from before a flush.
+            return self::newVersion();
+        }
+
+        return $this->versions[$scope] = $version;
     }
 
     private function bumpVersion(string $scope): bool
     {
-        $key = $this->versionKey($scope);
-        $version = $this->memcached->increment($key, 1);
+        $version = self::newVersion();
 
-        if ($version !== false) {
-            return true;
+        if (!$this->memcached->set($this->versionKey($scope), $version, 0)) {
+            return false;
         }
 
-        if ($this->memcached->add($key, '2', 0)) {
-            return true;
-        }
+        $this->versions[$scope] = $version;
 
-        $version = $this->memcached->get($key);
+        return true;
+    }
 
-        return is_numeric($version) && (int) $version > 1;
+    private static function newVersion(): string
+    {
+        return bin2hex(random_bytes(6));
     }
 
     private function versionKey(string $scope): string

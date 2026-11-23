@@ -12,6 +12,8 @@ final class InMemoryRedis
     /** @var array<string, string> */
     public array $values = [];
 
+    public int $reads = 0;
+
     public function set(string $key, string $value, mixed ...$arguments): bool
     {
         $options = is_array($arguments[0] ?? null) ? $arguments[0] : $arguments;
@@ -39,6 +41,8 @@ final class InMemoryRedis
 
     public function get(string $key): string|false
     {
+        $this->reads++;
+
         return $this->values[$key] ?? false;
     }
 
@@ -48,6 +52,8 @@ final class InMemoryRedis
      */
     public function mget(array $keys): array
     {
+        $this->reads++;
+
         return array_map(fn (string $key): string|false => $this->values[$key] ?? false, $keys);
     }
 

@@ -12,6 +12,8 @@ final class InMemoryMemcached
     /** @var array<string, string> */
     public array $values = [];
 
+    public int $reads = 0;
+
     /** @var array<string, int> */
     public array $expirations = [];
 
@@ -50,6 +52,8 @@ final class InMemoryMemcached
 
     public function get(string $key): string|false
     {
+        $this->reads++;
+
         if (!array_key_exists($key, $this->values)) {
             $this->resultCode = 16;
 
@@ -67,6 +71,8 @@ final class InMemoryMemcached
      */
     public function getMulti(array $keys): array
     {
+        $this->reads++;
+
         return array_intersect_key($this->values, array_fill_keys($keys, true));
     }
 

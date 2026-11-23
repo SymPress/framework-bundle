@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.0.12 — 2026-11-23
+
+- Treat object-cache payloads that fail signature or class validation as misses in the native Redis and Memcached backends and delete them, so `wp_cache_add()` refills the cache after rotating `APP_SECRET`/`SYMPRESS_CACHE_SECRET` instead of failing forever.
+- Convert Memcached expirations above 30 days to absolute timestamps; long-lived transients no longer expire immediately.
+- Clone objects in the request cache on set and get, like WordPress core, and keep cached `null` values in `wp_cache_get_multiple()`.
+- Read Redis/Memcached namespace versions once per request (one round trip per `get`, one per `get_multiple` instead of 2n+1) and use random version tokens, so an evicted version key no longer revives entries from before a flush.
+- Remove Redis entries of superseded namespace versions during the scheduled purge (`SCAN`/`UNLINK`), so repeated flushes no longer grow Redis without bound.
+- Document that the payload signature prevents object injection but does not bind the cache key.
+- Let Dependabot update the GitHub Actions pins.
+
 ## 1.0.11 — 2026-11-16
 
 - Require a super admin to flush the object cache from the admin bar on multisite; the persistent cache is shared network-wide, so sub-site admins (`manage_options`) can no longer flush it. The toolbar entry is hidden for them as well.

@@ -77,6 +77,33 @@ final class NativeObjectCacheVersionTest extends TestCase
         self::assertFalse($found);
     }
 
+    public function testRedisPurgeRemovesEntriesOfSupersededVersions(): void
+    {
+        $redis = new InMemoryRedis();
+        $backend = $this->backend($redis);
+        $keys = new CacheKeyGenerator();
+        $post = $keys->create('1', 'posts');
+        $term = $keys->create('1', 'terms');
+
+        self::assertTrue($backend->set('short', 'old'));
+        self::assertTrue($backend->set($post, 'old post'));
+        self::assertTrue($backend->set($term, 'term'));
+        self::assertTrue($backend->clear(substr($post, 0, -64)));
+        self::assertTrue($backend->set($post, 'new post'));
+        self::assertCount(7, $redis->values, '4 entries + global, posts and terms version keys');
+
+        self::assertTrue($this->backend($redis)->purge());
+
+        self::assertCount(6, $redis->values);
+        self::assertSame('old', $backend->get('short'));
+        self::assertSame('new post', $backend->get($post));
+        self::assertSame('term', $backend->get($term));
+
+        self::assertTrue($backend->clear());
+        self::assertTrue($backend->purge());
+        self::assertSame([], array_filter(array_keys($redis->values), static fn (string $key): bool => !str_contains($key, ':version:')));
+    }
+
     private function connection(string $driver): InMemoryRedis|InMemoryMemcached
     {
         return $driver === 'redis' ? new InMemoryRedis() : new InMemoryMemcached();

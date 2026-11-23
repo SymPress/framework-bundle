@@ -27,7 +27,8 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         self::assertTrue(class_exists(\Redis::class), 'The redis PHP extension is required.');
         $redis = new \Redis();
         $this->connect(fn (): bool => $redis->connect('127.0.0.1', (int) (getenv('SYMPRESS_TEST_REDIS_PORT') ?: 6379), 1.0));
-        $cache = new NativeRedisObjectCacheAdapter($redis, 'sympress-smoke-' . bin2hex(random_bytes(6)), new ObjectCacheValueCodec('review-secret'));
+        $prefix = 'sympress-smoke-' . bin2hex(random_bytes(6));
+        $cache = new NativeRedisObjectCacheAdapter($redis, $prefix, new ObjectCacheValueCodec('review-secret'));
 
         self::assertTrue($cache->set('object', (object) ['date' => new \DateTimeImmutable('2026-10-01')]));
         $decoded = $cache->get('object');
@@ -40,6 +41,12 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         self::assertSame(0, $cache->decr('count', 9));
         self::assertTrue($cache->clear());
         self::assertFalse($cache->get('count'));
+
+        self::assertTrue($cache->purge());
+        self::assertSame([], array_values(array_filter(
+            (array) $redis->keys($prefix . ':*'),
+            static fn (string $key): bool => !str_starts_with($key, $prefix . ':version:'),
+        )));
 
         $redis->close();
     }

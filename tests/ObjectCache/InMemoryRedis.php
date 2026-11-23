@@ -73,4 +73,29 @@ final class InMemoryRedis
 
         return $count;
     }
+
+    /**
+     * Returns all matches in one batch, like a phpredis SCAN over a small keyspace.
+     *
+     * @param-out int $iterator
+     * @return array<int, string>|false
+     */
+    public function scan(?int &$iterator, string $pattern, int $count = 0): array|false
+    {
+        if ($iterator === 0) {
+            return false;
+        }
+
+        $iterator = 0;
+
+        return array_values(array_filter(array_keys($this->values), static fn (string $key): bool => fnmatch($pattern, $key)));
+    }
+
+    /**
+     * @param array<int, string> $keys
+     */
+    public function unlink(array $keys): int
+    {
+        return $this->del($keys);
+    }
 }

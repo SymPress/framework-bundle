@@ -209,6 +209,11 @@ list of exact class names such as `WC_Product,Vendor\\Plugin\\CacheValue`. Wildc
 boolean values are rejected. Additional classes apply only to authenticated signed payloads;
 review their deserialization/magic methods before adding them. Classes may load later during
 WordPress/plugin bootstrap. Prefer plain data arrays when object restoration is unnecessary.
+The signature protects deserialization against object injection; it is not an integrity guarantee
+for cached data. Non-negative integers are stored unsigned, and the HMAC does not cover the cache
+key, so anyone able to write to the backend can still replay a signed value under another key.
+Payloads that fail validation (for example after rotating the secret) are treated as misses and
+removed by the native Redis and Memcached backends.
 
 Filesystem and default SQLite cache paths use a private per-user temporary directory with a
 separate project/environment namespace and mode 0700. APCu still requires trusted PHP-FPM pools:

@@ -60,9 +60,21 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
      */
     public function get(string $key, ?bool &$found = null): mixed
     {
-        $payload = $this->memcached->get($this->rawKey($key));
+        $rawKey = $this->rawKey($key);
+        $payload = $this->memcached->get($rawKey);
 
         if ($payload === false && $this->lastResultCode() === $this->notFoundCode()) {
+            $this->cacheMisses++;
+            $found = false;
+
+            return false;
+        }
+
+        $value = $this->codec->decode($payload, $valid);
+
+        if (!$valid) {
+            // Written under another secret or tampered with: drop it so add() can refill the key.
+            $this->memcached->delete($rawKey);
             $this->cacheMisses++;
             $found = false;
 
@@ -72,7 +84,7 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
         $this->cacheHits++;
         $found = true;
 
-        return $this->codec->decode($payload);
+        return $value;
     }
 
     /**
@@ -93,21 +105,32 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
         $payloads = is_array($payloads) ? $payloads : [];
         $result = [];
         $found = [];
+        $invalid = [];
 
         foreach ($rawKeys as $rawKey) {
             $key = $keyMap[$rawKey];
 
-            if (!array_key_exists($rawKey, $payloads)) {
-                $this->cacheMisses++;
-                $result[$key] = false;
-                $found[$key] = false;
+            if (array_key_exists($rawKey, $payloads)) {
+                $value = $this->codec->decode($payloads[$rawKey], $valid);
 
-                continue;
+                if ($valid) {
+                    $this->cacheHits++;
+                    $result[$key] = $value;
+                    $found[$key] = true;
+
+                    continue;
+                }
+
+                $invalid[] = $rawKey;
             }
 
-            $this->cacheHits++;
-            $result[$key] = $this->codec->decode($payloads[$rawKey]);
-            $found[$key] = true;
+            $this->cacheMisses++;
+            $result[$key] = false;
+            $found[$key] = false;
+        }
+
+        if ($invalid !== []) {
+            $this->memcached->deleteMulti($invalid);
         }
 
         return $result;

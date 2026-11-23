@@ -215,7 +215,7 @@ final class ObjectCacheProxy
             $this->cache_hits++;
             $found = true;
 
-            return $this->cache[$cacheKey];
+            return self::copy($this->cache[$cacheKey]);
         }
 
         $result = $this->pool($group)->get($cacheKey, $found);
@@ -247,7 +247,7 @@ final class ObjectCacheProxy
 
             if (!$force && $this->useLocalCache && array_key_exists($cacheKey, $this->cache)) {
                 $this->cache_hits++;
-                $result[$key] = $this->cache[$cacheKey];
+                $result[$key] = self::copy($this->cache[$cacheKey]);
 
                 continue;
             }
@@ -397,11 +397,20 @@ final class ObjectCacheProxy
             return;
         }
 
-        $this->cache[$cacheKey] = $data;
+        $this->cache[$cacheKey] = self::copy($data);
 
         if (isset($this->non_persistent_groups[$group])) {
             $this->runtime->set($cacheKey, $data);
         }
+    }
+
+    /**
+     * WordPress core clones objects on the way into and out of its request cache, so callers
+     * mutating a returned object do not change what later reads see.
+     */
+    private static function copy(mixed $data): mixed
+    {
+        return is_object($data) ? clone $data : $data;
     }
 
     private function syncStats(): void

@@ -160,6 +160,28 @@ final class ObjectCacheProxyTest extends TestCase
         self::assertSame('value', $cache->get('new', 'stats'));
     }
 
+    public function testRequestCacheHandsOutCopiesOfObjectsLikeWordPressCore(): void
+    {
+        $cache = $this->proxy();
+        $user = (object) ['user_email' => 'stored@example.com'];
+        self::assertTrue($cache->set('1', $user, 'users'));
+        $user->user_email = 'changed-after-set@example.com';
+
+        $first = $cache->get('1', 'users');
+        self::assertInstanceOf(\stdClass::class, $first);
+        self::assertSame('stored@example.com', $first->user_email);
+        $first->user_email = 'changed-after-get@example.com';
+
+        $again = $cache->get('1', 'users');
+        self::assertInstanceOf(\stdClass::class, $again);
+        self::assertSame('stored@example.com', $again->user_email);
+
+        $multiple = $cache->get_multiple(['1'], 'users');
+        self::assertInstanceOf(\stdClass::class, $multiple['1']);
+        $multiple['1']->user_email = 'changed-after-get-multiple@example.com';
+        self::assertSame('stored@example.com', $cache->get('1', 'users')->user_email);
+    }
+
     private function proxy(): ObjectCacheProxy
     {
         return new ObjectCacheProxy(

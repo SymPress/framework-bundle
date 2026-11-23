@@ -10,6 +10,13 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
     private int $cacheHits = 0;
     private int $cacheMisses = 0;
 
+    /**
+     * Namespace versions read during this request, so each key costs one round trip.
+     *
+     * @var array<string, string>
+     */
+    private array $versions = [];
+
     public function __construct(
         private readonly object $redis,
         private readonly string $prefix,
@@ -344,49 +351,62 @@ LUA;
         return strlen($key) > 64 ? substr($key, 0, -64) : '';
     }
 
-    private function version(string $scope): int
+    /**
+     * Versions are random tokens, never counters: a version key lost to eviction gets a fresh
+     * token instead of restarting at a value that entries from before a flush still carry.
+     */
+    private function version(string $scope): string
     {
+        if (isset($this->versions[$scope])) {
+            return $this->versions[$scope];
+        }
+
         $key = $this->versionKey($scope);
 
         try {
             $version = $this->redis->get($key);
 
-            if (is_numeric($version) && (int) $version > 0) {
-                return (int) $version;
+            if (!is_string($version) || $version === '') {
+                $candidate = self::newVersion();
+                $version = $this->setVersionIfMissing($key, $candidate) ? $candidate : $this->redis->get($key);
             }
-
-            $this->setVersionIfMissing($key, 1);
         } catch (\Throwable) {
-            return 1;
+            $version = null;
         }
 
-        return 1;
+        if (!is_string($version) || $version === '') {
+            // Unknown version: a throwaway token keeps this call from hitting entries from before a flush.
+            return self::newVersion();
+        }
+
+        return $this->versions[$scope] = $version;
     }
 
     private function bumpVersion(string $scope): bool
     {
-        $script = <<<'LUA'
-local value = redis.call('incr', KEYS[1])
-if value <= 1 then
-    redis.call('set', KEYS[1], '2')
-    return 2
-end
+        $version = self::newVersion();
 
-return value
-LUA;
+        if (!$this->isOk($this->redis->set($this->versionKey($scope), $version))) {
+            return false;
+        }
 
-        $result = $this->evalScript($script, [$this->versionKey($scope)], []);
+        $this->versions[$scope] = $version;
 
-        return is_numeric($result) && (int) $result > 1;
+        return true;
     }
 
-    private function setVersionIfMissing(string $key, int $version): void
+    private function setVersionIfMissing(string $key, string $version): bool
     {
         try {
-            $this->redis->set($key, (string) $version, ['nx']);
+            return $this->isOk($this->redis->set($key, $version, ['nx']));
         } catch (\Throwable) {
-            $this->redis->set($key, (string) $version, 'NX');
+            return $this->isOk($this->redis->set($key, $version, 'NX'));
         }
+    }
+
+    private static function newVersion(): string
+    {
+        return bin2hex(random_bytes(6));
     }
 
     private function versionKey(string $scope): string

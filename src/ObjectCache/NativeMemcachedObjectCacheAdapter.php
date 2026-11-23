@@ -6,6 +6,8 @@ namespace SymPress\Framework\ObjectCache;
 
 final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInterface
 {
+    private const int MAX_RELATIVE_TTL = 2592000;
+
     private ObjectCacheValueCodec $codec;
     private int $cacheHits = 0;
     private int $cacheMisses = 0;
@@ -20,7 +22,7 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
 
     public function add(string $key, mixed $data, int $expire = 0): bool
     {
-        return (bool) $this->memcached->add($this->rawKey($key), $this->codec->encode($data), $expire);
+        return (bool) $this->memcached->add($this->rawKey($key), $this->codec->encode($data), $this->expiration($expire));
     }
 
     public function addMultiple(array $data, int $expire = 0): array
@@ -36,7 +38,7 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
 
     public function set(string $key, mixed $data, int $expire = 0): bool
     {
-        return (bool) $this->memcached->set($this->rawKey($key), $this->codec->encode($data), $expire);
+        return (bool) $this->memcached->set($this->rawKey($key), $this->codec->encode($data), $this->expiration($expire));
     }
 
     public function setMultiple(array $data, int $expire = 0): array
@@ -52,7 +54,7 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
 
     public function replace(string $key, mixed $data, int $expire = 0): bool
     {
-        return (bool) $this->memcached->replace($this->rawKey($key), $this->codec->encode($data), $expire);
+        return (bool) $this->memcached->replace($this->rawKey($key), $this->codec->encode($data), $this->expiration($expire));
     }
 
     /**
@@ -216,6 +218,12 @@ final class NativeMemcachedObjectCacheAdapter implements ObjectCacheBackendInter
     public function cacheMisses(): int
     {
         return $this->cacheMisses;
+    }
+
+    private function expiration(int $expire): int
+    {
+        // Memcached reads relative TTLs above 30 days as absolute Unix timestamps.
+        return $expire > self::MAX_RELATIVE_TTL ? time() + $expire : $expire;
     }
 
     private function rawKey(string $key): string

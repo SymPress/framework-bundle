@@ -65,6 +65,9 @@ final class NativeObjectCacheBackendSmokeTest extends TestCase
         self::assertSame(1, $cache->get('count'));
         self::assertSame(3, $cache->incr('count', 2));
         self::assertSame(0, $cache->decr('count', 9));
+        self::assertTrue($cache->set('long_lived', 'value', 365 * 86400));
+        self::assertSame('value', $cache->get('long_lived'));
+
         self::assertTrue($cache->clear());
         self::assertFalse($cache->get('count'));
 

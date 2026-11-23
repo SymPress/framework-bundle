@@ -35,7 +35,19 @@ final class ObjectCacheValueCodec
             . base64_encode($serialized);
     }
 
-    public function decode(mixed $payload): mixed
+    /**
+     * @param-out bool $valid false when the payload is not a value this codec wrote (wrong secret, tampered, disallowed class)
+     */
+    public function decode(mixed $payload, ?bool &$valid = null): mixed
+    {
+        $value = $this->decodePayload($payload);
+        // encode(false) is deterministic, so it is the only payload that legitimately decodes to false.
+        $valid = $value !== false || $payload === $this->encode(false);
+
+        return $value;
+    }
+
+    private function decodePayload(mixed $payload): mixed
     {
         if (!is_string($payload)) {
             return false;

@@ -71,8 +71,10 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
      */
     public function get(string $key, ?bool &$found = null): mixed
     {
+        $rawKey = $this->rawKey($key);
+
         try {
-            $payload = $this->redis->get($this->rawKey($key));
+            $payload = $this->redis->get($rawKey);
         } catch (\Throwable) {
             $payload = false;
         }
@@ -84,10 +86,21 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
             return false;
         }
 
+        $value = $this->codec->decode($payload, $valid);
+
+        if (!$valid) {
+            // Written under another secret or tampered with: drop it so add() can refill the key.
+            $this->deleteRaw([$rawKey]);
+            $this->cacheMisses++;
+            $found = false;
+
+            return false;
+        }
+
         $this->cacheHits++;
         $found = true;
 
-        return $this->codec->decode($payload);
+        return $value;
     }
 
     /**
@@ -105,21 +118,31 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
             $payloads = array_fill(0, count($rawKeys), false);
         }
 
+        $invalid = [];
+
         foreach (array_values($keys) as $index => $key) {
             $payload = is_array($payloads) ? ($payloads[$index] ?? false) : false;
 
-            if ($payload === false) {
-                $this->cacheMisses++;
-                $result[$key] = false;
-                $found[$key] = false;
+            if ($payload !== false) {
+                $value = $this->codec->decode($payload, $valid);
 
-                continue;
+                if ($valid) {
+                    $this->cacheHits++;
+                    $result[$key] = $value;
+                    $found[$key] = true;
+
+                    continue;
+                }
+
+                $invalid[] = $rawKeys[$index];
             }
 
-            $this->cacheHits++;
-            $result[$key] = $this->codec->decode($payload);
-            $found[$key] = true;
+            $this->cacheMisses++;
+            $result[$key] = false;
+            $found[$key] = false;
         }
+
+        $this->deleteRaw($invalid);
 
         return $result;
     }
@@ -191,6 +214,22 @@ final class NativeRedisObjectCacheAdapter implements ObjectCacheBackendInterface
     public function cacheMisses(): int
     {
         return $this->cacheMisses;
+    }
+
+    /**
+     * @param list<string> $rawKeys
+     */
+    private function deleteRaw(array $rawKeys): void
+    {
+        if ($rawKeys === []) {
+            return;
+        }
+
+        try {
+            $this->redis->del($rawKeys);
+        } catch (\Throwable) {
+            // A failed cleanup only leaves the undecodable entry for the next read.
+        }
     }
 
     private function setWithMode(string $key, mixed $data, int $expire, string $mode): bool

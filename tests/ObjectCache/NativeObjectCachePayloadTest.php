@@ -62,6 +62,29 @@ final class NativeObjectCachePayloadTest extends TestCase
         self::assertFalse($backend->add('flag', true));
     }
 
+    public function testMemcachedConvertsExpirationsBeyondThirtyDaysToTimestamps(): void
+    {
+        $memcached = new InMemoryMemcached();
+        $backend = new NativeMemcachedObjectCacheAdapter($memcached, 'test', new ObjectCacheValueCodec('secret'));
+        $year = 365 * 86400;
+        $before = time();
+
+        self::assertTrue($backend->set('long', 'value', $year));
+        self::assertTrue($backend->add('long_add', 'value', $year));
+        self::assertTrue($backend->replace('long', 'value', $year));
+        self::assertTrue($backend->set('short', 'value', 3600));
+
+        $expirations = array_values(array_filter(
+            $memcached->expirations,
+            static fn (string $key): bool => !str_contains($key, ':version:'),
+            ARRAY_FILTER_USE_KEY,
+        ));
+        self::assertCount(3, $expirations);
+        self::assertGreaterThanOrEqual($before + $year, $expirations[0]);
+        self::assertGreaterThanOrEqual($before + $year, $expirations[1]);
+        self::assertSame(3600, $expirations[2]);
+    }
+
     private function connection(string $driver): InMemoryRedis|InMemoryMemcached
     {
         return $driver === 'redis' ? new InMemoryRedis() : new InMemoryMemcached();

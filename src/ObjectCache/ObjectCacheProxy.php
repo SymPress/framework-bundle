@@ -265,7 +265,7 @@ final class ObjectCacheProxy
 
         foreach ($cacheKeys as $cacheKey) {
             $key = $keyMap[$cacheKey];
-            $value = $values[$cacheKey] ?? false;
+            $value = array_key_exists($cacheKey, $values) ? $values[$cacheKey] : false;
             $result[$key] = $value;
 
             if (($found[$cacheKey] ?? false) === true) {

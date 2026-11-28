@@ -27,11 +27,14 @@ final class SymfonySecurityCompatibilityTest extends TestCase
     /** @return iterable<string, array{string, string, string}> */
     public static function dependencyBoundaries(): iterable
     {
-        yield 'expression initial incomplete fix' => ['symfony/expression-language', '8.1.6', '8.1.9'];
-        yield 'expression last affected patch' => ['symfony/expression-language', '8.1.8', '8.1.9'];
+        foreach (['expression-language', 'framework-bundle', 'http-kernel', 'routing'] as $component) {
+            yield $component . ' November 25 security boundary' => ['symfony/' . $component, '8.1.11', '8.1.12'];
+        }
+
+        yield 'expression initial incomplete fix' => ['symfony/expression-language', '8.1.6', '8.1.12'];
+        yield 'expression last affected patch' => ['symfony/expression-language', '8.1.8', '8.1.12'];
         yield 'yaml inline lexer' => ['symfony/yaml', '8.1.10', '8.1.11'];
         yield 'kernel security boundary' => ['sympress/kernel', '1.1.13', '1.1.14'];
-        yield 'framework-bundle trusted proxy boundary' => ['symfony/framework-bundle', '8.1.10', '8.1.11'];
     }
 
     #[DataProvider('deepExpressions')]
